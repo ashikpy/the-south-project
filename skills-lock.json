@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "skills": {
+    "shaders": {
+      "source": "shader-effects-inc/shaders",
+      "commit": "1f71d113ee17c23d77e95ee46a98c3f4fcbef75a",
+      "sourceType": "github",
+      "skillPath": "skills/shaders/SKILL.md",
+      "computedHash": "b5fb440fb9de2518a22072703ae372e3563a326ef5dde45e594000d19fe3ec68"
+    }
+  }
+}

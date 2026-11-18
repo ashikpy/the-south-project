@@ -1,0 +1,128 @@
+/*
+ * Intro timeline (seconds):
+ * 0.0  black
+ * 0.5  pen starts writing the wordmark in solid ink, stroke by stroke
+ * 2.2  writing complete; hold
+ * 2.9  wordmark lifts away
+ * 3.4  curtain draws up, revealing the page (ends ~4.6)
+ *
+ * Per-stroke start times and durations are set from Loader.tsx.
+ */
+
+.loader-overlay {
+  --ease-lux: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #000;
+  clip-path: inset(0 0 0 0);
+  animation: loader-curtain 1.2s var(--ease-lux) 3.4s forwards;
+}
+
+.loader-shader {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.loader-shader.is-ready {
+  opacity: 0.45; /* dim the shader so the wordmark leads */
+}
+
+.loader-mark {
+  position: relative;
+  /* Small and quiet: luxury marks whisper. ~220px on desktop, 160px on phones. */
+  width: clamp(160px, 16vw, 240px);
+  animation:
+    loader-settle 2.9s var(--ease-out) both,
+    loader-lift 0.8s var(--ease-lux) 2.9s forwards;
+}
+
+.loader-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.loader-ink {
+  fill: #fff;
+}
+
+/* Mask strokes: the "pen". Hidden (offset 1) until JS times and starts them. */
+.loader-nibs path {
+  fill: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+  /* butt, not round: a round cap would leak a dot of ink before writing starts */
+  stroke-linecap: butt;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.loader-nibs.is-writing path {
+  animation-name: loader-write;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes loader-write {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes loader-settle {
+  from {
+    transform: scale(0.985);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes loader-lift {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes loader-curtain {
+  to {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+@keyframes loader-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader-overlay {
+    animation: loader-fade 0.6s ease 1.2s forwards;
+  }
+  .loader-mark {
+    animation: none;
+  }
+  .loader-nibs path,
+  .loader-nibs.is-writing path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

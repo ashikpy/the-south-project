@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "shaders": {
+    "4744706": {
+      "title": "Gleaming Fountain",
+      "component": "GleamingFountain",
+      "file": "components/shaders/GleamingFountain.tsx",
+      "framework": "react",
+      "hash": "sha256:d2972ed3d7bc7bbf840ab1a302b8b75c67b698dc96aba14d1b0e042d6d142051",
+      "updatedAt": "2026-11-18T16:17:41.719811+00:00",
+      "installedAt": "2026-11-18T16:21:14.267Z"
+    }
+  }
+}

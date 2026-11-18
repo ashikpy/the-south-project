@@ -1,0 +1,492 @@
+/*
+ * Hero — editorial layout on the Figma composition.
+ * Sizes are in vw so the composition scales as one piece on landscape
+ * screens; portrait screens get their own arrangement at the bottom.
+ *
+ * Entrance (seconds from first paint, in step with Loader.css):
+ * 3.2  photo settles from a slow push-in as the curtain lifts
+ * 3.5  hairline rules draw across
+ * 3.6  "the south" rises out of its rule letter by letter, "project" follows
+ * 4.05 small notes slide up, line after line
+ * then the photo breathes, the sun glows, and the scene answers the pointer.
+ */
+
+.hero {
+  --intro: 3.2s;
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --pad: max(16px, 2.5vw);
+  --ink: #f7f3ec;
+  --rule: rgb(247 243 236 / 0.32);
+  --display: 16.4vw;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  overflow: hidden;
+  color: var(--ink);
+  background: #000;
+  font-family: var(--font-red-hat-display), sans-serif;
+}
+
+/* ---------- Photograph ---------- */
+
+.hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  animation: hero-settle 2.8s var(--ease-expo) var(--intro) both;
+}
+
+/* Pointer response, eased in HeroMedia.tsx; scaled so edges never show. */
+.hero-media-pointer {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(calc(var(--mx, 0) * -22px), calc(var(--my, 0) * -14px), 0) scale(1.035);
+  will-change: transform;
+}
+
+/* Slow, almost imperceptible breathing: the sea feels alive, nothing "moves". */
+.hero-media-drift {
+  position: absolute;
+  inset: 0;
+  animation: hero-breathe 28s ease-in-out calc(var(--intro) + 2.8s) infinite alternate;
+}
+
+/* Photo is wider than the frame and anchored right, as in the design. */
+.hero-bg {
+  object-fit: cover;
+  object-position: right center;
+}
+
+/*
+ * The sun, located in image coordinates so it tracks every crop.
+ * Photo is 1688 × 932 (ratio 1.811); the sun sits at 73.7% × 67.3% of it.
+ * --obj-x mirrors the photo's object-position (1 = right, 0.73 on portrait).
+ */
+.hero-media-drift {
+  --obj-x: 1;
+  --img-w: max(100vw, 181.1svh);
+  --img-h: max(100svh, calc(100vw / 1.811));
+  --sun-x: calc((100vw - var(--img-w)) * var(--obj-x) + var(--img-w) * 0.737);
+  --sun-y: calc((100svh - var(--img-h)) / 2 + var(--img-h) * 0.673);
+}
+
+.hero-sun,
+.hero-flare {
+  position: absolute;
+  left: var(--sun-x);
+  top: var(--sun-y);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  translate: -50% -50%;
+}
+
+/* Warm bloom that swells and settles like heat over the water. */
+.hero-sun {
+  width: 34vmin;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 214 160 / 0.75),
+    rgb(255 160 80 / 0.28) 38%,
+    rgb(255 120 50 / 0.08) 65%,
+    transparent
+  );
+  animation:
+    hero-fade 2.4s ease calc(var(--intro) + 1s) both,
+    hero-sun 7s ease-in-out calc(var(--intro) + 3.4s) infinite alternate;
+}
+
+/* Anamorphic streak along the horizon, very faint. */
+.hero-flare {
+  width: 90vw;
+  height: 3px;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 196 140 / 0.35) 35%,
+    rgb(255 236 210 / 0.7) 50%,
+    rgb(255 196 140 / 0.35) 65%,
+    transparent
+  );
+  filter: blur(1.5px);
+  transform-origin: center;
+  animation:
+    hero-flare-in 2.6s var(--ease-expo) calc(var(--intro) + 1.1s) both,
+    hero-flare 9s ease-in-out calc(var(--intro) + 3.7s) infinite alternate;
+}
+
+/* Deepens the sky so type and notes carry; soft vignette toward the horizon. */
+.hero-grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(10 12 22 / 0.42) 0%, rgb(10 12 22 / 0.08) 45%, transparent 60%),
+    linear-gradient(0deg, rgb(0 0 0 / 0.35) 0%, transparent 22%),
+    radial-gradient(120% 90% at 60% 55%, transparent 55%, rgb(0 0 0 / 0.28) 100%);
+}
+
+/* ---------- Small text: one voice for every note ---------- */
+
+.hero-small,
+.hero-intro,
+.hero-note {
+  margin: 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  font-feature-settings: "ss01", "case";
+}
+
+.hero-small {
+  font-size: clamp(10px, 0.78vw, 12px);
+  line-height: 1.2;
+  color: rgb(247 243 236 / 0.62);
+}
+
+.hero-intro,
+.hero-note {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.02;
+}
+
+/* Each line slides up out of its own mask, one after another. */
+.hero-mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.hero-mask > span {
+  display: block;
+  animation: hero-line 1.3s var(--ease-expo) calc(var(--intro) + 0.85s + var(--i) * 0.07s) both;
+}
+
+/* ---------- Meta row (bottom edge) ---------- */
+
+.hero-meta {
+  position: absolute;
+  inset: auto var(--pad) max(16px, 1.875vw);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: start;
+  gap: var(--pad);
+}
+
+.hero-meta > :last-child {
+  justify-self: end;
+}
+
+/* ---------- Display type ---------- */
+
+.hero-title {
+  margin: 0;
+  font-size: var(--display);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.065em;
+  font-kerning: normal;
+  text-rendering: geometricPrecision;
+}
+
+/*
+ * Each row is a full-width band whose box is trimmed to cap height and
+ * baseline. The hairline sits on the baseline and the type is clipped there,
+ * so descenders and round overshoots disappear into the rule.
+ */
+.hero-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: block;
+  padding-inline: var(--pad);
+  white-space: nowrap;
+  text-box: trim-both cap alphabetic;
+  clip-path: inset(-50% 0 0 0);
+}
+
+.hero-row::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--rule);
+  transform-origin: left;
+  animation: hero-rule 1.6s var(--ease-expo) calc(var(--intro) + 0.3s) both;
+}
+
+.hero-word {
+  display: inline-block;
+}
+
+/* Outer box takes the hover lift; inner box takes the entrance. */
+.hero-char {
+  display: inline-block;
+  transition: transform 0.9s cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+.hero-char-inner {
+  display: inline-block;
+  animation: hero-rise 1.5s var(--ease-expo) calc(var(--row-start) + var(--i) * 0.035s) both;
+}
+
+/* Letters lift under the pointer, the neighbours follow a little. */
+@media (hover: hover) {
+  .hero-char:hover {
+    transform: translateY(-0.07em);
+    transition-duration: 0.35s;
+  }
+
+  .hero-char:hover + .hero-char,
+  .hero-char:has(+ .hero-char:hover) {
+    transform: translateY(-0.03em);
+    transition-duration: 0.45s;
+  }
+}
+
+/* "the south": hung from the right edge */
+.hero-row--top {
+  top: 9.2vw;
+  text-align: right;
+}
+
+.hero-row--top::after {
+  transform-origin: right;
+}
+
+.hero-row--top {
+  --row-start: calc(var(--intro) + 0.4s);
+}
+
+.hero-row--top .hero-word {
+  margin-right: -0.04em; /* optical: the h stem lines up with the edge */
+}
+
+/* "project": from the left edge */
+.hero-row--bottom {
+  top: 22.6vw;
+  text-align: left;
+  /*
+   * Letters rise out of the rule like the top row, then the crop opens so
+   * descenders hang over it: cropping them for good reads as "proiect".
+   */
+  animation: hero-unclip 0.9s var(--ease-expo) calc(var(--intro) + 1.7s) both;
+}
+
+@keyframes hero-unclip {
+  from {
+    clip-path: inset(-50% 0 0 0);
+  }
+  to {
+    clip-path: inset(-50% 0 -40% 0);
+  }
+}
+
+.hero-row--bottom {
+  --row-start: calc(var(--intro) + 0.6s);
+}
+
+.hero-row--bottom .hero-word {
+  margin-left: -0.05em; /* optical: the p bowl lines up with the edge */
+}
+
+/* ---------- Notes beside the headline ---------- */
+
+/* Left of "the south", right-aligned to its first letter */
+.hero-intro {
+  position: absolute;
+  top: 10.1vw;
+  left: var(--pad);
+  width: 26vw;
+  text-align: right;
+  align-items: flex-end;
+  font-size: clamp(13px, 1.45vw, 24px);
+}
+
+/* Right of "project", set in the open sky over the sun */
+.hero-note {
+  position: absolute;
+  top: 23.5vw;
+  right: var(--pad);
+  width: 24vw;
+  font-size: clamp(11px, 1.02vw, 16px);
+  color: rgb(247 243 236 / 0.86);
+}
+
+.hero-note span:nth-child(n + 2) {
+  padding-left: 3.2vw; /* stepped lines, as in a set paragraph */
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes hero-settle {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes hero-breathe {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.04) translate3d(-0.6%, 0.3%, 0);
+  }
+}
+
+/* The word rises out of its rule. */
+@keyframes hero-rise {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-line {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-sun {
+  from {
+    scale: 1;
+    opacity: 0.75;
+  }
+  to {
+    scale: 1.18;
+    opacity: 1;
+  }
+}
+
+@keyframes hero-flare-in {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes hero-flare {
+  from {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(0.82);
+    opacity: 0.6;
+  }
+}
+
+@keyframes hero-rule {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- Portrait: tablets and phones ---------- */
+
+@media (max-aspect-ratio: 1/1) {
+  .hero {
+    --display: 24.5vw;
+  }
+
+  /* Keep the setting sun in frame instead of the rocks. */
+  .hero-bg {
+    object-position: 73% center;
+  }
+
+  .hero-media-drift {
+    --obj-x: 0.73;
+  }
+
+  .hero-meta {
+    grid-template-columns: auto 1fr;
+  }
+
+  /* Only the scroll cue and the year on a narrow screen. */
+  .hero-meta > span:not(:first-child, :last-child) {
+    display: none;
+  }
+
+  .hero-row--top {
+    top: calc(max(16px, 1.875vw) + 30vw);
+  }
+
+  .hero-row--bottom {
+    top: calc(max(16px, 1.875vw) + 30vw + 23vw);
+  }
+
+  .hero-intro {
+    top: calc(max(16px, 1.875vw) + 16vw);
+    width: auto;
+    text-align: left;
+    align-items: flex-start;
+    font-size: clamp(12px, 3.4vw, 22px);
+  }
+
+  .hero-note {
+    top: calc(max(16px, 1.875vw) + 30vw + 23vw + 26vw);
+    right: auto;
+    left: var(--pad);
+    width: auto;
+    font-size: clamp(11px, 2.9vw, 18px);
+  }
+
+  .hero-note span:nth-child(n + 2) {
+    padding-left: 0;
+  }
+}
+
+/* ---------- Reduced motion: everything at rest, nothing hidden ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-media,
+  .hero-media-drift,
+  .hero-mask > span,
+  .hero-char-inner,
+  .hero-sun,
+  .hero-flare,
+  .hero-row::after {
+    animation: none;
+  }
+
+  .hero-row--bottom {
+    animation: none;
+    clip-path: inset(-50% 0 -40% 0);
+  }
+
+  .hero-char {
+    transition: none;
+  }
+}
