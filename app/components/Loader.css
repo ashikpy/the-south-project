@@ -1,10 +1,12 @@
 /*
  * Intro timeline (seconds):
- * 0.0  black
+ * 0.0  black: not a curtain, but the hero video's own opening frame showing
+ *      through this see-through overlay
  * 0.5  pen starts writing the wordmark in solid ink, stroke by stroke
  * 2.2  writing complete; hold
  * 2.9  wordmark lifts away
- * 3.4  curtain draws up, revealing the page (ends ~4.6)
+ * 3.2  the video starts and rises out of black under the hero's entrance
+ * 3.7  overlay removes itself
  *
  * Per-stroke start times and durations are set from Loader.tsx.
  */
@@ -18,9 +20,10 @@
   z-index: 9999;
   display: grid;
   place-items: center;
-  background: #000;
-  clip-path: inset(0 0 0 0);
-  animation: loader-curtain 1.2s var(--ease-lux) 3.4s forwards;
+  background: transparent; /* the black is the video's first frame behind */
+  pointer-events: none;
+  /* Nothing to wipe away: this only marks the end so Loader.tsx unmounts. */
+  animation: loader-fade 0.01s linear 3.7s forwards;
 }
 
 .loader-shader {
@@ -98,12 +101,6 @@
     opacity: 0;
     transform: translateY(-12px);
     filter: blur(6px);
-  }
-}
-
-@keyframes loader-curtain {
-  to {
-    clip-path: inset(0 0 100% 0);
   }
 }
 

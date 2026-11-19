@@ -5,20 +5,20 @@ import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react
 import "./About.css";
 
 /*
- * DRAFT COPY — placeholder brand lines, not facts. Replace with the real
- * story and real figures of The South Project before launch.
+ * Copy from the Pentara concept brief. The figures describe the framework
+ * itself; swap in real community numbers once they exist.
  */
 const STATEMENT =
-  "The South Project {chips} is a quiet collection of places by the southern sea, made for slow mornings, long light and rooms that let you breathe, for people who would rather stay than pass through.";
+  "The South Project {chips} brings together people from different places, disciplines and backgrounds to meet, collaborate, develop ideas and bring projects to life.";
 
 const STATS = [
-  { value: 365, suffix: "", label: "Sunsets a year" },
-  { value: 7, suffix: "", label: "Days to slow down" },
-  { value: 1, suffix: "", label: "Sea to wake up to" },
+  { value: 1, suffix: "", label: "Brand" },
+  { value: 5, suffix: "", label: "Landscapes" },
+  { value: 1, suffix: "", label: "Ocean connecting every shore" },
 ];
 
-// Crops of the hero photograph, shown as small tiles inside the sentence.
-const CHIPS = ["74% 70%", "20% 85%", "96% 80%"];
+// Stills from the hero's ocean film, shown as small tiles inside the sentence.
+const CHIPS = ["/hero/chip-surface.jpg", "/hero/chip-deep.jpg", "/hero/chip-reef.jpg"];
 
 // Scroll progress (0–1 through the pinned stretch) at which things happen.
 const WORDS_FROM = 0.04;
@@ -30,15 +30,9 @@ const vars = (v: Record<string, number | string>) => v as CSSProperties;
 function Chips() {
   return (
     <span className="about-chips" aria-hidden="true">
-      {CHIPS.map((position, i) => (
-        <span key={position} className="about-chip" style={vars({ "--c": i })}>
-          <Image
-            src="/hero/beach.png"
-            alt=""
-            fill
-            sizes="64px"
-            style={{ objectFit: "cover", objectPosition: position }}
-          />
+      {CHIPS.map((src, i) => (
+        <span key={src} className="about-chip" style={vars({ "--c": i })}>
+          <Image src={src} alt="" fill sizes="64px" style={{ objectFit: "cover" }} />
         </span>
       ))}
     </span>
@@ -138,7 +132,7 @@ export default function About() {
   let index = 0;
 
   return (
-    <section ref={section} className="about" id="story" aria-labelledby="about-label">
+    <section ref={section} className="about" id="people" aria-labelledby="about-label">
       <div className="about-pin">
         <p className="about-label" id="about-label">
           <svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">

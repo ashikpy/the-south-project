@@ -22,7 +22,7 @@ const redHatDisplay = Red_Hat_Display({
 
 export const metadata: Metadata = {
   title: "The South Project",
-  description: "The South Project",
+  description: "A landscape of ideas, people and possibilities.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

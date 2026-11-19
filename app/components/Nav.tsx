@@ -2,13 +2,13 @@ import Link from "next/link";
 import "./Nav.css";
 
 /*
- * DRAFT LINKS — section anchors until the real pages exist.
+ * Section anchors until the real pages exist.
  */
 const LINKS = [
   { href: "/", label: "Home" },
-  { href: "#story", label: "Story" },
-  { href: "#places", label: "Places" },
-  { href: "#journal", label: "Journal" },
+  { href: "#pentara", label: "Pentara" },
+  { href: "#people", label: "People" },
+  { href: "#projects", label: "Projects" },
 ];
 
 /**
@@ -43,8 +43,8 @@ export default function Nav({ current = "/" }: { current?: string }) {
         <Link href="#contact" className="nav-text">
           Contact
         </Link>
-        <Link href="#enquire" className="nav-cta">
-          <span>Enquire</span>
+        <Link href="#join" className="nav-cta">
+          <span>Join us</span>
           <span className="nav-cta-chip" aria-hidden="true">
             <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
               <path

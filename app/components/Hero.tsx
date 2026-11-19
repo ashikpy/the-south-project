@@ -1,15 +1,16 @@
 import type { CSSProperties } from "react";
 import HeroMedia from "./HeroMedia";
+import HeroRays from "./HeroRays";
 import "./Hero.css";
 
 /*
- * DRAFT COPY — placeholder brand lines, not facts. Replace with the real
- * story of The South Project before launch.
+ * Copy from the Pentara concept brief. The hero sets the mood only;
+ * the five landscapes are revealed further down as visitors scroll.
  */
 const COPY = {
-  meta: ["the south project", "chapter 01 — arrival", "© 2026"],
-  intro: ["a quiet project", "from the south,", "made by the sea"],
-  note: ["slow mornings, salt air", "and long light —", "gathered in one place"],
+  meta: ["the south project", "pentara — five landscapes", "© 2026"],
+  intro: ["a landscape", "of ideas, people", "and possibilities"],
+  note: ["one collective,", "five expressions —", "begin at the ocean"],
   cue: "[ to see more — keep scrolling ]",
 };
 
@@ -48,6 +49,7 @@ export default function Hero() {
   return (
     <section className="hero" aria-label="The South Project">
       <HeroMedia />
+      <HeroRays />
 
       <p className="hero-intro">
         <Lines lines={COPY.intro} />
