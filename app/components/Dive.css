@@ -1,0 +1,260 @@
+/*
+ * The dive — a tall track with a pinned stage. Dive.tsx sets 0–1 variables
+ * on .dive-stage from the scroll position:
+ *   --dive   zoom into the water; the hero's type leaves the surface
+ *   --deep   light fades to ink; the particles appear
+ *   --words  how many words of the Pentara statement are lit (decimal)
+ *   --pass   you swim through the statement
+ *   --space, --mist, --sky   the descent (see its section below)
+ * Children read them (custom properties inherit), so all motion stays in CSS.
+ * The particle canvas (DeepParticles.tsx) reads the same scroll state.
+ */
+
+.dive {
+  position: relative;
+  height: 800svh; /* 1 screen pinned + 7 screens of scroll */
+  background: #000;
+}
+
+.dive-stage {
+  --dive: 0;
+  --deep: 0;
+  --words: 0;
+  --pass: 0;
+  --space: 0;
+  --mist: 0;
+  --sky: 0;
+  --track: 0;
+
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* ---------- The hero, sinking ---------- */
+
+/* Zoom toward a point below centre: down into the water, not straight on. */
+.hero-media-dive {
+  position: absolute;
+  inset: 0;
+  transform: scale(calc(1 + var(--dive, 0) * 0.85));
+  transform-origin: 50% 64%;
+  will-change: transform;
+}
+
+/* Light from the surface stretches and is left behind. */
+.hero-rays {
+  opacity: calc(1 - var(--dive, 0) * 1.2);
+  transform: scaleY(calc(1 + var(--dive, 0) * 0.6));
+  transform-origin: 50% 0;
+}
+
+/* The hero's type rises off as you go down. */
+.hero-row,
+.hero-intro,
+.hero-note,
+.hero-meta {
+  translate: 0 calc(var(--dive, 0) * -22svh);
+  opacity: calc(1 - var(--dive, 0) * 1.6);
+}
+
+/* Depth: from the blue of the video to ink black, with only a faint glow of
+   NEXIO's steel blue (#24566A) left behind the type. */
+.hero-deep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(70% 55% at 50% 45%, rgb(36 86 106 / 0.2) 0%, transparent 72%), #05090b;
+  opacity: calc(var(--deep, 0) * 0.98);
+}
+
+/* ---------- Particles (canvas) ---------- */
+
+.deep-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ---------- Pentara ---------- */
+
+.pentara {
+  --ink: #f3ece4;
+  --pad: max(16px, 2.5vw);
+
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  color: var(--ink);
+  font-family: var(--font-red-hat-display), sans-serif;
+  pointer-events: none; /* nothing to click; scrolling passes through */
+}
+
+/* ---------- Intro: label and statement ---------- */
+
+.pentara-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(28px, 5svh, 56px);
+  padding: 96px var(--pad) 48px;
+  /* Swimming on, you pass through the statement: it grows and dissolves. */
+  scale: calc(1 + var(--pass, 0) * 1.4);
+  opacity: calc(1 - var(--pass, 0));
+  filter: blur(calc(var(--pass, 0) * 10px));
+}
+
+.pentara-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 6px 11px;
+  border-radius: 3px;
+  background: var(--ink);
+  color: #05090b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: clamp(0, calc(var(--words, 0) * 0.8), 1);
+  translate: 0 calc((1 - clamp(0, var(--words, 0), 1)) * 12px);
+}
+
+.pentara-statement {
+  max-width: 17em;
+  margin: 0;
+  font-size: clamp(26px, min(4.1vw, 7svh), 72px);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.pentara-word {
+  --lit: clamp(0, calc(var(--words, 0) - var(--w)), 1);
+  opacity: calc(var(--lit) * 0.92 + 0.08 * clamp(0, var(--words, 0), 1));
+  filter: blur(calc((1 - var(--lit)) * 6px));
+}
+
+/* The brand, set as the wordmark from the intro, sitting on the baseline. */
+.pentara-brand {
+  white-space: nowrap;
+}
+
+.pentara-wordmark {
+  display: inline-block;
+  height: 0.8em;
+  width: auto;
+  aspect-ratio: 2400 / 342;
+  vertical-align: -0.1em;
+  margin-left: 0.04em;
+}
+
+/* ---------- The descent: space, Earth, clouds, sky ---------- */
+
+/*
+ *   --space  out in space: the Earth fades in, far ahead
+ *   --mist   into the cloud tops: a white-out, up and back down (0–1–0)
+ *   --sky    under the clouds: the sky (CloudShader) takes over
+ * The Earth's turn and zoom are drawn in Earth.tsx from the same scroll.
+ */
+.descent {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.descent-earth {
+  position: absolute;
+  inset: 0;
+  opacity: var(--space, 0);
+  scale: calc(0.85 + 0.15 * var(--space, 0));
+  filter: blur(calc(var(--mist, 0) * 6px));
+}
+
+.descent-sky {
+  position: absolute;
+  inset: 0;
+  opacity: var(--sky, 0);
+  /* Settling out of the cloud: the sky eases back from close. */
+  scale: calc(1.25 - 0.25 * var(--sky, 0));
+  filter: blur(calc((1 - var(--sky, 0)) * 16px));
+}
+
+.descent-mist {
+  position: absolute;
+  inset: -10%;
+  background: radial-gradient(60% 60% at 50% 50%, #f4f7f8 0%, rgb(232 240 244 / 0.92) 55%, rgb(214 228 236 / 0.7) 100%);
+  opacity: calc(var(--mist, 0) * 0.96);
+}
+
+/* ---------- Phone ---------- */
+
+@media (max-width: 640px) {
+  .pentara-statement {
+    font-size: clamp(24px, 7vw, 34px);
+  }
+}
+
+/* ---------- Reduced motion: no pin, no zoom; everything simply follows ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .dive {
+    height: auto;
+  }
+
+  .dive-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .deep-particles {
+    display: none;
+  }
+
+  .pentara {
+    --words: 99;
+    --pass: 0;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(70% 55% at 50% 45%, rgb(36 86 106 / 0.2) 0%, transparent 72%), #05090b;
+  }
+
+  .pentara-intro {
+    position: relative;
+    min-height: 80svh;
+  }
+
+  /* The Earth, still, after the statement; no flight, no clouds. */
+  .descent {
+    order: 1; /* after the statement */
+    position: relative;
+    height: 100svh;
+    background: #05090b;
+  }
+
+  .descent-earth {
+    opacity: 1;
+    scale: 1;
+  }
+
+  .descent-sky,
+  .descent-mist {
+    display: none;
+  }
+}

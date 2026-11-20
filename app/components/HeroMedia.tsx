@@ -43,7 +43,9 @@ export default function HeroMedia() {
     const el = ref.current;
     if (!el) return;
     const finePointer = window.matchMedia("(pointer: fine)").matches;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     if (!finePointer || reduced) return;
 
     let targetX = 0;
@@ -78,22 +80,31 @@ export default function HeroMedia() {
 
   return (
     <div className="hero-media" aria-hidden="true">
-      <div className="hero-media-pointer" ref={ref}>
-        <div className="hero-media-drift">
-          <video
-            ref={video}
-            className="hero-bg"
-            muted
-            playsInline
-            preload="auto"
-            disablePictureInPicture
-          >
-            <source src="/hero/ocean-720.mp4" type="video/mp4" media="(max-width: 900px)" />
-            <source src="/hero/ocean-1080.mp4" type="video/mp4" />
-          </video>
+      {/* Scroll dive (Dive.tsx): zooms the whole scene toward the deep. */}
+      <div className="hero-media-dive">
+        <div className="hero-media-pointer" ref={ref}>
+          <div className="hero-media-drift">
+            <video
+              ref={video}
+              className="hero-bg"
+              muted
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+            >
+              <source
+                src="/hero/ocean-720.mp4"
+                type="video/mp4"
+                media="(max-width: 900px)"
+              />
+              <source src="/hero/ocean-1080.mp4" type="video/mp4" />
+            </video>
+          </div>
         </div>
       </div>
       <div className="hero-grade" />
+      {/* Darkness of depth; the particles live in DeepParticles.tsx. */}
+      <div className="hero-deep" />
     </div>
   );
 }

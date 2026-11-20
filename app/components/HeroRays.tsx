@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import LightRays from "./LightRays";
 
-// Seconds from first paint: with the ocean video, just after the loader's
-// wordmark lifts, so the rays' own intro plays as the light comes up.
-const START_AT = 3.2;
+// Seconds from first paint: as the loader finishes writing the wordmark,
+// so light starts falling through the dark while the name is still on
+// screen, ahead of the video coming up at 3.2s.
+const START_AT = 2;
 
 /**
  * Sunlight from the surface at the top of the hero (React Bits LightRays),
