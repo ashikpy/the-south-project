@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CloudShader } from "@/components/ui/cloud-shader";
 import DeepParticles, { type DiveState } from "./DeepParticles";
-import Earth, { type EarthView } from "./Earth";
+import Earth, { earthReadout, type EarthView } from "./Earth";
 import Pentara, { STATEMENT_TOKENS } from "./Pentara";
 import "./Dive.css";
 
@@ -17,8 +17,10 @@ const PHASES = {
   words: [0.19, 0.38], // --words: statement lights up word by word
   pass: [0.4, 0.48], // --pass: you swim through the statement
   forward: [0.4, 1], // the specks rush past: now stars, as you fly
-  space: [0.44, 0.54], // --space: out in space, the Earth far ahead
-  zoom: [0.5, 0.88], // the descent to southern India (Earth.tsx)
+  space: [0.43, 0.5], // --space: out in space, among the stars
+  rise: [0.46, 0.6], // earthrise: the planet rises, the sun breaks over it
+  station: [0.55, 0.7], // the space station flies by, from far ahead to beside you
+  zoom: [0.54, 0.88], // the descent to southern India (Earth.tsx)
   mist: [0.8, 0.95], // --mist: into the cloud tops, a white-out
   sky: [0.85, 0.93], // --sky: under the clouds, the sky (CloudShader)
 } as const;
@@ -45,7 +47,9 @@ export default function Dive({ children }: { children: ReactNode }) {
   const track = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const state = useRef<DiveState>({ track: 0, deep: 0, forward: 0 });
-  const earth = useRef<EarthView>({ zoom: 0, on: false });
+  const earth = useRef<EarthView>({ zoom: 0, on: false, rise: 0 });
+  const altitude = useRef<HTMLElement>(null);
+  const position = useRef<HTMLElement>(null);
   // Heavy layers start ahead of their turn and stop when far away.
   const [earthOn, setEarthOn] = useState(false);
   const [skyOn, setSkyOn] = useState(false);
@@ -56,7 +60,7 @@ export default function Dive({ children }: { children: ReactNode }) {
     if (!el || !st) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const show = requestAnimationFrame(() => {
-        earth.current = { zoom: 0, on: true };
+        earth.current = { zoom: 0, on: true, rise: 1 };
         setEarthOn(true);
       });
       return () => cancelAnimationFrame(show);
@@ -79,6 +83,7 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--pass", easeIn(range(p, PHASES.pass)));
       set("--space", easeInOut(range(p, PHASES.space)));
       set("--mist", Math.sin(Math.PI * range(p, PHASES.mist)));
+      set("--space-black", easeInOut(range(p, PHASES.space)));
       set("--sky", sky);
       set("--track", p);
 
@@ -87,7 +92,19 @@ export default function Dive({ children }: { children: ReactNode }) {
       if (p >= PHASES.words[0]) setEarthOn(true);
       setSkyOn(p >= PHASES.zoom[0] + 0.15);
 
-      earth.current.zoom = easeInOut(range(p, PHASES.zoom));
+      const zoom = easeInOut(range(p, PHASES.zoom));
+      earth.current.zoom = zoom;
+      earth.current.rise = range(p, PHASES.rise);
+      earth.current.station = range(p, PHASES.station);
+
+      // Travel readout: altitude and the point below, closing in.
+      const mist = Math.sin(Math.PI * range(p, PHASES.mist));
+      set("--hud", easeInOut(range(p, PHASES.rise)) * (1 - Math.min(1, mist * 2 + sky)));
+      if (p > PHASES.space[0] && altitude.current && position.current) {
+        const r = earthReadout(zoom);
+        altitude.current.textContent = `${Math.round(r.km).toLocaleString("en-US")} km`;
+        position.current.textContent = `${Math.abs(r.lat).toFixed(2)}° ${r.lat < 0 ? "S" : "N"}  ${Math.abs(r.lon).toFixed(2)}° ${r.lon < 0 ? "W" : "E"}`;
+      }
       earth.current.on = p > PHASES.space[0] - 0.02 && sky < 1;
 
       state.current.track = p;
@@ -115,11 +132,23 @@ export default function Dive({ children }: { children: ReactNode }) {
         {children}
         <DeepParticles state={state} />
         <div className="descent" aria-hidden="true">
+          <div className="descent-space" />
           {earthOn && <Earth className="descent-earth" view={earth} />}
           <div className="descent-sky">
             {skyOn && <CloudShader className="h-full min-h-0" />}
           </div>
           <div className="descent-mist" />
+          <div className="descent-hud">
+            <p className="descent-hud-title">Approaching southern India</p>
+            <p className="descent-hud-item">
+              <span>Altitude</span>
+              <span ref={altitude}>38,226 km</span>
+            </p>
+            <p className="descent-hud-item descent-hud-end">
+              <span>Position</span>
+              <span ref={position}>8.41° W  0.00° N</span>
+            </p>
+          </div>
         </div>
         <Pentara />
       </div>

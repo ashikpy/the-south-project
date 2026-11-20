@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 /*
  * A realistic Earth in plain three.js (WebGL).
@@ -174,7 +177,14 @@ const haloFragment = /* glsl */ `
     float ndl = dot(n, uSun);
     vec3 atmo = mix(${ATMO_TWILIGHT}, ${ATMO_DAY}, smoothstep(-0.25, 0.75, ndl));
     float strength = smoothstep(-0.5, 1.0, ndl);
-    gl_FragColor = vec4(atmo * a * strength, a * strength);
+    // Backlit (the sun behind the planet): light scattered forward through
+    // the air makes the whole rim glow, brightest towards the sun.
+    float forward = pow(max(dot(view, uSun), 0.0), 5.0);
+    // A thin bright edge, not a thick ring: confined close to the planet.
+    float edge = pow(clamp(d / LIMB, 0.0, 1.0), 9.0);
+    vec3 col = atmo * a * strength + vec3(1.0, 0.82, 0.62) * edge * forward * 0.9;
+    float alpha = clamp(a * strength + edge * forward * 0.9, 0.0, 1.0);
+    gl_FragColor = vec4(col, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
@@ -183,8 +193,21 @@ const haloFragment = /* glsl */ `
 /** Southern India (Kerala and Tamil Nadu), where the zoom lands. */
 const TARGET = { lat: 10.5, lon: 77.5 };
 /** Height above the surface (planet radius = 1) at zoom 0 and zoom 1. */
-const ALT_FAR = 12;
+const ALT_FAR = 6;
 const ALT_NEAR = 0.16;
+/** Earth radius, for the altitude readout. */
+const EARTH_KM = 6371;
+/**
+ * Earthrise: at rise 0 the camera looks this far above the planet (world
+ * units), so only its edge shows at the bottom of the frame; it settles on
+ * the planet as rise goes to 1.
+ */
+const RISE_LOOK = 2.6;
+/**
+ * The sun starts just hidden behind the planet's edge, then swings round
+ * to light southern India: it breaks over the rim on the way.
+ */
+const SUN_START = new THREE.Vector3(-0.07, 0.11, -1).normalize();
 /** Final camera pitch from straight down (radians), and the zoom it starts at. */
 const PITCH = 1.0;
 const TILT_FROM = 0.6;
@@ -195,13 +218,41 @@ export interface EarthView {
   zoom: number;
   /** false while hidden: skip drawing */
   on: boolean;
+  /** 0–1 earthrise: the planet rises into frame and the sun breaks over it */
+  rise: number;
+  /** 0–1 the space station's fly-past across the foreground (hidden outside) */
+  station?: number;
+}
+
+/**
+ * The ISS (NASA's model, optimised by scripts/optimize-model.mjs) drifts
+ * across the foreground on the approach: this far in front of the camera,
+ * this long, entering at one side and leaving at the other.
+ */
+const STATION = { file: "/models/iss.glb", length: 0.2, far: 3.2, near: 0.2 };
+
+const smooth = (t: number) => {
+  const c = Math.min(1, Math.max(0, t));
+  return c * c * (3 - 2 * c);
+};
+const altitudeAt = (zoom: number) =>
+  Math.exp(Math.log(ALT_FAR) + (Math.log(ALT_NEAR) - Math.log(ALT_FAR)) * zoom);
+/** How far (radians) the globe is still turned away from TARGET. */
+const turnAt = (zoom: number) => Math.pow(1 - zoom, 2.5) * 1.5 * (1 - zoom);
+
+/** Altitude and the point below, for the travel readout on the page. */
+export function earthReadout(zoom: number) {
+  const z = Math.min(1, Math.max(0, zoom));
+  return {
+    km: altitudeAt(z) * EARTH_KM,
+    lat: TARGET.lat * Math.pow(z, 0.6),
+    lon: TARGET.lon - THREE.MathUtils.radToDeg(turnAt(z)),
+  };
 }
 
 // Spin of the sphere that brings TARGET's longitude to face the camera
 // (three.js SphereGeometry: u = 0 at longitude -180, running east).
 const phi = THREE.MathUtils.degToRad(TARGET.lon + 180);
-
-
 const FACE_Y = -Math.atan2(-Math.cos(phi), Math.sin(phi));
 const FACE_X = THREE.MathUtils.degToRad(TARGET.lat);
 
@@ -333,12 +384,160 @@ export default function Earth({
     halo.scale.setScalar(HALO);
     scene.add(halo);
 
+    // Stars: sharp points drawn at screen resolution on a sphere that
+    // travels with the camera (so infinitely far away). Seeded, so the sky
+    // is the same on every visit; most are faint, a few bright.
+    const STARS = 18000; // the narrow lens sees ~2% of the sky: ~350 on screen
+    let seed = 11;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const starPos = new Float32Array(STARS * 3);
+    const starSize = new Float32Array(STARS);
+    const starCol = new Float32Array(STARS * 3);
+    for (let i = 0; i < STARS; i++) {
+      const u = rand() * 2 - 1;
+      const a = rand() * Math.PI * 2;
+      const r = Math.sqrt(1 - u * u);
+      starPos.set([r * Math.cos(a) * 80, u * 80, r * Math.sin(a) * 80], i * 3);
+      const b = Math.pow(rand(), 7); // brightness: mostly faint
+      starSize[i] = 1.1 + b * 2.6;
+      const warm = rand();
+      const tint = warm < 0.15 ? [1, 0.86, 0.72] : warm > 0.8 ? [0.8, 0.88, 1] : [1, 1, 1];
+      const k = 0.32 + 0.68 * b;
+      starCol.set(tint.map((c) => c * k), i * 3);
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+    starGeo.setAttribute("aSize", new THREE.BufferAttribute(starSize, 1));
+    starGeo.setAttribute("aColor", new THREE.BufferAttribute(starCol, 3));
+    const uDpr = { value: renderer.getPixelRatio() };
+    const sky = new THREE.Points(
+      starGeo,
+      new THREE.ShaderMaterial({
+        uniforms: { uDpr },
+        vertexShader: /* glsl */ `
+          attribute float aSize;
+          attribute vec3 aColor;
+          uniform float uDpr;
+          varying vec3 vColor;
+          void main() {
+            vColor = aColor;
+            gl_PointSize = aSize * uDpr;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */ `
+          varying vec3 vColor;
+          void main() {
+            float d = length(gl_PointCoord - 0.5);
+            float a = smoothstep(0.5, 0.1, d);
+            gl_FragColor = vec4(vColor * a, a);
+          }
+        `,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    sky.renderOrder = -1;
+    scene.add(sky);
+
+    // Sun flare: a soft glow, a hot core and a thin horizontal streak, drawn
+    // over everything while the sun is in view and not behind the planet.
+    const glowTexture = (draw: (g: CanvasRenderingContext2D, s: number) => void) => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 256;
+      const g = c.getContext("2d")!;
+      draw(g, 256);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    };
+    const radial = (stops: [number, string][]) =>
+      glowTexture((g, n) => {
+        const r = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+        stops.forEach(([o, col]) => r.addColorStop(o, col));
+        g.fillStyle = r;
+        g.fillRect(0, 0, n, n);
+      });
+    const flareTex = [
+      radial([[0, "rgba(255,238,215,0.35)"], [0.3, "rgba(255,215,175,0.08)"], [1, "rgba(255,200,160,0)"]]),
+      radial([[0, "rgba(255,255,255,1)"], [0.18, "rgba(255,252,245,0.85)"], [0.45, "rgba(255,240,220,0.1)"], [1, "rgba(255,230,200,0)"]]),
+    ];
+    const flares = flareTex.map((map) => {
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map,
+          blending: THREE.AdditiveBlending,
+          depthTest: false,
+          depthWrite: false,
+          transparent: true,
+          toneMapped: false,
+          opacity: 0,
+        }),
+      );
+      sprite.renderOrder = 10;
+      scene.add(sprite);
+      return sprite;
+    });
+    const flareScale: [number, number][] = [[9, 9], [1.6, 1.6]];
+    const sunEnd = new THREE.Vector3(...sun).normalize();
+
+    // The station flies past on its own layer (a second canvas over the
+    // planet, same camera), so it can go out of focus as it nears while the
+    // Earth stays sharp, like a foreground object through a real lens.
+    // Lit by the sun, a little blue earthshine and a dim reflection.
+    const stationGL = view
+      ? new THREE.WebGLRenderer({ antialias: true, alpha: true })
+      : null;
+    const stationScene = new THREE.Scene();
+    const station = new THREE.Group();
+    station.visible = false;
+    stationScene.add(station);
+    const sunLight = new THREE.DirectionalLight(0xfff2e2, 3.4);
+    stationScene.add(sunLight, sunLight.target, new THREE.AmbientLight(0x6f8fb0, 0.25));
+    let pmrem: THREE.PMREMGenerator | null = null;
+    let envTex: THREE.Texture | null = null;
+    let stationReady = false;
+    let stationShown = false;
+    if (stationGL) {
+      stationGL.setPixelRatio(renderer.getPixelRatio());
+      stationGL.toneMapping = THREE.ACESFilmicToneMapping;
+      stationGL.toneMappingExposure = 1.1;
+      stationGL.setClearColor(0x000000, 0);
+      const c = stationGL.domElement;
+      c.style.cssText =
+        "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;will-change:filter,opacity";
+      el.appendChild(c);
+      pmrem = new THREE.PMREMGenerator(stationGL);
+      envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      stationScene.environment = envTex;
+      stationScene.environmentIntensity = 0.35;
+      new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(STATION.file, (gltf) => {
+        const model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        model.position.sub(box.getCenter(new THREE.Vector3()));
+        const holder = new THREE.Group();
+        holder.add(model);
+        holder.scale.setScalar(STATION.length / Math.max(size.x, size.y, size.z));
+        station.add(holder);
+        stationReady = true;
+      });
+    }
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3();
+    const ahead = new THREE.Vector3();
+    const spinQ = new THREE.Quaternion();
+    const spinE = new THREE.Euler();
+    const toCenter = new THREE.Vector3();
+
     let fit = 1; // extra distance on portrait boxes so the globe fits
     const resize = () => {
       const w = el.clientWidth;
       const h = el.clientHeight;
       if (!w || !h) return;
       renderer.setSize(w, h, false);
+      stationGL?.setSize(w, h, false);
       camera.aspect = w / h;
       // Keep the whole globe in frame on narrow boxes too.
       fit = w < h ? h / w : 1;
@@ -371,14 +570,12 @@ export default function Earth({
         drift += dt * 0.02 * (1 - z);
         // Turn into place while descending: Africa first, then across the
         // Arabian Sea until southern India comes round to meet you.
-        surface.rotation.y = FACE_Y + (Math.pow(1 - z, 2.5) * 1.5 + drift) * (1 - z);
+        surface.rotation.y = FACE_Y + turnAt(z) + drift * (1 - z);
         clouds.rotation.y = surface.rotation.y + 0.03 + drift * 0.3;
         globe.rotation.x = FACE_X * Math.pow(z, 0.6);
         globe.rotation.z = TILT * (1 - Math.pow(z, 0.6));
         // Descend on a log scale: the speed feels even all the way down.
-        const alt = Math.exp(
-          Math.log(ALT_FAR) + (Math.log(ALT_NEAR) - Math.log(ALT_FAR)) * z,
-        );
+        const alt = altitudeAt(z);
         const dist = alt * (fit + (1 - fit) * z);
         // Near the end the camera pitches up from straight down toward the
         // horizon, like tilting a map view: the land gets depth and the
@@ -390,7 +587,11 @@ export default function Earth({
           -Math.sin(pitch) * dist,
           1 + Math.cos(pitch) * dist,
         );
-        camera.lookAt(0, 0, 1);
+        // Earthrise: look above the planet at first, settle on it.
+        const rise = Math.min(1, Math.max(0, v.rise ?? 1));
+        camera.lookAt(0, RISE_LOOK * (1 - smooth(rise)), 1);
+        // The sun swings out from behind the planet to light India.
+        uSun.value.copy(SUN_START).lerp(sunEnd, smooth((rise - 0.4) / 0.6)).normalize();
         // The global cloud map is too coarse up close: clear it on the way
         // down (the page's own cloud layer takes over at the bottom).
         uCloudFade.value = 1 - Math.min(1, Math.max(0, (z - 0.45) / 0.3));
@@ -399,6 +600,65 @@ export default function Earth({
         surface.rotation.y += spin * dt;
         clouds.rotation.y += spin * 1.15 * dt;
       }
+      // The station's fly-by, placed relative to the camera: it appears
+      // small and far ahead, comes at you growing in perspective and turning
+      // to show its sides, and passes just beside the camera, low and left.
+      const f = view?.current?.station ?? 0;
+      station.visible = stationReady && f > 0 && f < 1;
+      if (station.visible && stationGL) {
+        camera.updateMatrixWorld();
+        right.setFromMatrixColumn(camera.matrixWorld, 0);
+        up.setFromMatrixColumn(camera.matrixWorld, 1);
+        ahead.setFromMatrixColumn(camera.matrixWorld, 2).negate();
+        // Distance shrinks on a log scale, so the approach accelerates.
+        const depth = STATION.far * Math.pow(STATION.near / STATION.far, f);
+        // Where on screen it sits (fractions of the half-frame), drifting
+        // from upper right of centre out past the lower left edge.
+        const halfV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+        const halfH = halfV * camera.aspect;
+        // In the last stretch it whips out past the lower-left corner: it
+        // rushes past the viewer rather than hanging in front of them.
+        const late = Math.max(0, f - 0.6);
+        const sx = 0.34 - 0.8 * f - 9 * late * late;
+        const sy = 0.14 - 0.45 * f - 4.5 * late * late;
+        station.position
+          .copy(camera.position)
+          .addScaledVector(ahead, depth)
+          .addScaledVector(right, sx * depth * halfH)
+          .addScaledVector(up, sy * depth * halfV);
+        // Turning as it comes: from nearly edge-on to its broad face.
+        spinQ.setFromEuler(spinE.set(0.55 - 0.35 * f, 1.25 - 1.5 * f, 0.25 + 0.2 * f));
+        station.quaternion.copy(camera.quaternion).multiply(spinQ);
+        // Focus is on the Earth: the station blurs as it gets close, and
+        // fades in out of the distance.
+        const near = Math.min(1, Math.max(0, (0.5 - depth) / 0.38));
+        const c = stationGL.domElement;
+        c.style.filter = `blur(${(near * near * 9).toFixed(1)}px)`;
+        c.style.opacity = (smooth(f / 0.12) * (1 - smooth((f - 0.9) / 0.1))).toFixed(3);
+        sunLight.position.copy(uSun.value).multiplyScalar(10);
+        stationGL.render(stationScene, camera);
+        stationShown = true;
+      } else if (stationShown && stationGL) {
+        stationGL.domElement.style.opacity = "0";
+        stationShown = false;
+      }
+      // Stars stay put as you travel; the flare follows the sun.
+      sky.position.copy(camera.position);
+      const s = uSun.value;
+      toCenter.copy(camera.position).negate();
+      const camDist = toCenter.length();
+      const angle = s.angleTo(toCenter.normalize());
+      const limb = Math.asin(Math.min(1, 1 / camDist));
+      const clear = smooth((angle - limb + 0.004) / 0.016);
+      const burst = Math.exp(-Math.max(0, angle - limb) / 0.05);
+      const shine = clear * (0.55 + 0.6 * burst);
+      flares.forEach((f, i) => {
+        f.position.copy(camera.position).addScaledVector(s, 60);
+        const k = 1 + burst * 0.35;
+        f.scale.set(flareScale[i][0] * k, flareScale[i][1] * k, 1);
+        f.material.opacity = shine;
+      });
+
       arrived.forEach((at, i) => {
         if (at >= 0) uLevelOn.value[i] = Math.min(1, (now - at) / 700);
       });
@@ -414,8 +674,23 @@ export default function Earth({
       ro.disconnect();
       io.disconnect();
       sphere.dispose();
-      [surface, clouds, halo].forEach((m) => (m.material as THREE.Material).dispose());
-      [day, night, maps, blank, ...levelTex].forEach((t) => t.dispose());
+      starGeo.dispose();
+      envTex?.dispose();
+      pmrem?.dispose();
+      stationGL?.dispose();
+      stationGL?.domElement.remove();
+      station.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry.dispose();
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach((m) => {
+            Object.values(m).forEach((v) => v instanceof THREE.Texture && v.dispose());
+            m.dispose();
+          });
+        }
+      });
+      [surface, clouds, halo, sky, ...flares].forEach((m) => (m.material as THREE.Material).dispose());
+      [day, night, maps, blank, ...levelTex, ...flareTex].forEach((t) => t.dispose());
       renderer.dispose();
       renderer.domElement.remove();
     };
