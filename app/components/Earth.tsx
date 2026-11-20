@@ -185,6 +185,9 @@ const TARGET = { lat: 10.5, lon: 77.5 };
 /** Height above the surface (planet radius = 1) at zoom 0 and zoom 1. */
 const ALT_FAR = 12;
 const ALT_NEAR = 0.16;
+/** Final camera pitch from straight down (radians), and the zoom it starts at. */
+const PITCH = 1.0;
+const TILT_FROM = 0.6;
 
 /** Scroll-driven view, written by the page and read here each frame. */
 export interface EarthView {
@@ -237,7 +240,7 @@ export default function Earth({
     renderer.domElement.style.height = "100%";
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 100);
     camera.position.set(0, 0, DIST);
 
     const loader = new THREE.TextureLoader();
@@ -376,7 +379,18 @@ export default function Earth({
         const alt = Math.exp(
           Math.log(ALT_FAR) + (Math.log(ALT_NEAR) - Math.log(ALT_FAR)) * z,
         );
-        camera.position.z = 1 + alt * (fit + (1 - fit) * z);
+        const dist = alt * (fit + (1 - fit) * z);
+        // Near the end the camera pitches up from straight down toward the
+        // horizon, like tilting a map view: the land gets depth and the
+        // planet's curve glows at the top as you go in.
+        const t = Math.min(1, Math.max(0, (z - TILT_FROM) / (1 - TILT_FROM)));
+        const pitch = PITCH * t * t * (3 - 2 * t);
+        camera.position.set(
+          0,
+          -Math.sin(pitch) * dist,
+          1 + Math.cos(pitch) * dist,
+        );
+        camera.lookAt(0, 0, 1);
         // The global cloud map is too coarse up close: clear it on the way
         // down (the page's own cloud layer takes over at the bottom).
         uCloudFade.value = 1 - Math.min(1, Math.max(0, (z - 0.45) / 0.3));
