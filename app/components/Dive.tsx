@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CloudShader } from "@/components/ui/cloud-shader";
+import FluidOrb from "@/components/ui/fluid-orb";
 import DeepParticles, { type DiveState } from "./DeepParticles";
 import Earth, { earthReadout, type EarthView } from "./Earth";
+import ShootingStars from "./ShootingStars";
 import Pentara, { STATEMENT_TOKENS } from "./Pentara";
 import "./Dive.css";
 
@@ -19,11 +21,24 @@ const PHASES = {
   forward: [0.4, 1], // the specks rush past: now stars, as you fly
   space: [0.43, 0.5], // --space: out in space, among the stars
   rise: [0.46, 0.6], // earthrise: the planet rises, the sun breaks over it
+  meteors: [0.45, 0.66], // shooting stars cross the sky while in space
   station: [0.55, 0.7], // the space station flies by, from far ahead to beside you
   zoom: [0.54, 0.88], // the descent to southern India (Earth.tsx)
   mist: [0.8, 0.95], // --mist: into the cloud tops, a white-out
   sky: [0.85, 0.93], // --sky: under the clouds, the sky (CloudShader)
+  origo: [0.885, 0.935], // --origo: ORIGO, the mountains ahead, and its orb
 } as const;
+
+/** The five expressions, in the order they are met. */
+const PENTARA = [
+  { name: "NEXIO", tone: "#24566A" },
+  { name: "ORIGO", tone: "#8B7968" },
+  { name: "SILVA", tone: "#536B50" },
+  { name: "CULTURA", tone: "#B49355" },
+  { name: "TENAX", tone: "#A65F45" },
+];
+/** Met so far by the end of the dive: NEXIO (the ocean) and ORIGO. */
+const UNLOCKED = 2;
 
 type Range = readonly [number, number];
 const range = (p: number, [from, to]: Range) =>
@@ -48,6 +63,8 @@ export default function Dive({ children }: { children: ReactNode }) {
   const stage = useRef<HTMLDivElement>(null);
   const state = useRef<DiveState>({ track: 0, deep: 0, forward: 0 });
   const earth = useRef<EarthView>({ zoom: 0, on: false, rise: 0 });
+  // Shooting stars start only while out in space, before the descent.
+  const meteors = useRef(false);
   const altitude = useRef<HTMLElement>(null);
   const position = useRef<HTMLElement>(null);
   // Heavy layers start ahead of their turn and stop when far away.
@@ -85,6 +102,7 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--mist", Math.sin(Math.PI * range(p, PHASES.mist)));
       set("--space-black", easeInOut(range(p, PHASES.space)));
       set("--sky", sky);
+      set("--origo", easeInOut(range(p, PHASES.origo)));
       set("--track", p);
 
       // Mount the Earth once the statement begins (textures load in time),
@@ -96,6 +114,7 @@ export default function Dive({ children }: { children: ReactNode }) {
       earth.current.zoom = zoom;
       earth.current.rise = range(p, PHASES.rise);
       earth.current.station = range(p, PHASES.station);
+      meteors.current = p > PHASES.meteors[0] && p < PHASES.meteors[1];
 
       // Travel readout: altitude and the point below, closing in.
       const mist = Math.sin(Math.PI * range(p, PHASES.mist));
@@ -133,11 +152,39 @@ export default function Dive({ children }: { children: ReactNode }) {
         <DeepParticles state={state} />
         <div className="descent" aria-hidden="true">
           <div className="descent-space" />
+          <ShootingStars className="descent-meteors" active={meteors} />
           {earthOn && <Earth className="descent-earth" view={earth} />}
           <div className="descent-sky">
             {skyOn && <CloudShader className="h-full min-h-0" />}
           </div>
           <div className="descent-mist" />
+          {/* ORIGO: the word lights the sky (soft light). */}
+          <div className="origo">
+            <p className="origo-word">ORIGO</p>
+            <p className="origo-idea">Origin · Mountains</p>
+          </div>
+
+          {/* The five expressions: those met so far shine, the rest wait,
+              faded, until you reach them. */}
+          <div className="collect">
+            <ol className="collect-slots">
+              {PENTARA.map((x, i) => (
+                <li
+                  key={x.name}
+                  className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}`}
+                  title={x.name}
+                >
+                  {skyOn && (
+                    <FluidOrb
+                      size={72}
+                      color={x.tone}
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
           <div className="descent-hud">
             <p className="descent-hud-title">Approaching southern India</p>
             <p className="descent-hud-item">

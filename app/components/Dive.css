@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 800svh; /* 1 screen pinned + 7 screens of scroll */
+  height: 900svh; /* 1 screen pinned + 8 screens of scroll */
   background: #000;
 }
 
@@ -24,6 +24,7 @@
   --space: 0;
   --mist: 0;
   --sky: 0;
+  --origo: 0;
   --track: 0;
 
   position: sticky;
@@ -181,6 +182,15 @@
   opacity: var(--space-black, 0);
 }
 
+/* Shooting stars (ShootingStars.tsx), behind the planet. */
+.descent-meteors {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--space-black, 0);
+}
+
 .descent-earth {
   position: absolute;
   inset: 0;
@@ -196,6 +206,82 @@
   /* Settling out of the cloud: the sky eases back from close. */
   scale: calc(1.25 - 0.25 * var(--sky, 0));
   filter: blur(calc((1 - var(--sky, 0)) * 16px));
+}
+
+/* ORIGO: the mountains ahead, met in the sky. The word is set huge and
+   set tight in soft-light blending, so it brightens the sky behind it
+   rather than sitting on it. */
+.origo {
+  --o: var(--origo, 0);
+  --word: clamp(120px, 27vw, 480px);
+
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.origo-word {
+  position: absolute;
+  margin: 0;
+  font-family: var(--font-red-hat-display), sans-serif;
+  font-size: var(--word);
+  font-weight: 600;
+  line-height: 0.8;
+  letter-spacing: -0.08em;
+  color: #fff;
+  mix-blend-mode: soft-light;
+  opacity: var(--o);
+  translate: 0 calc((1 - var(--o)) * 6svh);
+}
+
+.origo-idea {
+  position: absolute;
+  top: calc(50% + var(--word) * 0.4 + 24px);
+  margin: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.9);
+  text-shadow: 0 1px 10px rgb(20 40 60 / 0.4);
+  opacity: var(--o);
+}
+
+/* The five orbs: met ones shine, the rest wait faded. */
+.collect {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(24px, 5svh, 48px);
+  translate: -50% calc((1 - var(--origo, 0)) * 16px);
+  opacity: var(--origo, 0);
+  pointer-events: none;
+}
+
+.collect-slots {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  border: 1px solid rgb(255 255 255 / 0.4);
+  border-radius: 999px;
+  background: rgb(30 60 90 / 0.16);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.collect-slot {
+  width: 34px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  opacity: 0.28;
+}
+
+.collect-slot.is-unlocked {
+  opacity: 1;
 }
 
 /* Travel readout: small mono type at the foot of the frame, as in the hero. */
@@ -325,6 +411,9 @@
 
   .descent-sky,
   .descent-mist,
+  .descent-meteors,
+  .origo,
+  .collect,
   .descent-hud {
     display: none;
   }

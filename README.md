@@ -38,3 +38,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Credits
 
 - Hero light rays: [React Bits](https://reactbits.dev) — "LightRays" component.
+- NEXIO orb: [Rare UI](https://rareui.com) — "fluid-orb" component (MIT + Commons Clause + Attribution).
+- Sky: [Aceternity UI](https://ui.aceternity.com) — "cloud-shader" component.
