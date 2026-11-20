@@ -33,6 +33,31 @@
   overflow: hidden;
 }
 
+/* ---------- Performance: layers that are covered or gone stop drawing ---------- */
+
+/* The light rays have faded out: display none also stops their WebGL loop
+   (it pauses when its box leaves the viewport). */
+.dive-stage.is-rays-off .hero-rays {
+  display: none;
+}
+
+/* Under the ink: the zoomed video needn't be composited any more. */
+.dive-stage.is-past-surface .hero-media-dive {
+  visibility: hidden;
+}
+
+.dive-stage.is-past-words .pentara-intro {
+  visibility: hidden;
+}
+
+/* In the sky: space and its particles are behind an opaque sky. */
+.dive-stage.is-in-sky .descent-space,
+.dive-stage.is-in-sky .descent-meteors,
+.dive-stage.is-in-sky .descent-earth,
+.dive-stage.is-in-sky .deep-particles {
+  visibility: hidden;
+}
+
 /* ---------- The hero, sinking ---------- */
 
 /* Zoom toward a point below centre: down into the water, not straight on. */
@@ -261,9 +286,9 @@
 
 .collect-slots {
   display: flex;
-  gap: 10px;
+  gap: 7px;
   margin: 0;
-  padding: 8px;
+  padding: 5px;
   list-style: none;
   border: 1px solid rgb(255 255 255 / 0.4);
   border-radius: 999px;
@@ -273,7 +298,7 @@
 }
 
 .collect-slot {
-  width: 34px;
+  width: 22px;
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 50%;

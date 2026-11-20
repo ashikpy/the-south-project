@@ -16,6 +16,11 @@ export type CloudShaderProps = {
   skyTopColor?: string;
   /** Sky color at the bottom (hex or rgb string). */
   skyBottomColor?: string;
+  /**
+   * Changed from source: render scale, 0.25–1, of the screen's pixels
+   * (capped at 2x). Clouds are soft, so less is far cheaper and looks alike.
+   */
+  quality?: number;
 };
 
 const VERT = `
@@ -231,6 +236,7 @@ export const CloudShader = ({
   cloudColor = "#fbf8f2",
   skyTopColor = "#3876ba",
   skyBottomColor = "#8cbfe8",
+  quality = 1,
 }: CloudShaderProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paramsRef = useRef({
@@ -303,7 +309,9 @@ export const CloudShader = ({
     ).matches;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr =
+        Math.min(window.devicePixelRatio || 1, 2) *
+        Math.min(1, Math.max(0.25, quality));
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
       const w = Math.max(1, Math.floor(width * dpr));
@@ -349,7 +357,7 @@ export const CloudShader = ({
       gl.deleteShader(vert);
       gl.deleteShader(frag);
     };
-  }, []);
+  }, [quality]);
 
   return (
     <div

@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils'
 export type FluidOrbProps = React.ComponentProps<'div'> & {
   size?: number
   color?: string
+  /** Changed from upstream: false draws one still frame (no loop). */
+  animate?: boolean
 }
 
 const VERT = `
@@ -121,6 +123,7 @@ function compile(gl: WebGLRenderingContext, type: number, src: string) {
 const FluidOrb = ({
   size = 240,
   color = '#1A73F2',
+  animate = true,
   className,
   style,
   ...props
@@ -170,7 +173,8 @@ const FluidOrb = ({
     gl.viewport(0, 0, px, px)
     gl.uniform2f(uResolution, px, px)
 
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduce =
+      !animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const start = performance.now()
     let raf = 0
 
@@ -188,7 +192,7 @@ const FluidOrb = ({
       gl.deleteShader(frag)
       gl.deleteBuffer(buffer)
     }
-  }, [size, color])
+  }, [size, color, animate])
 
   return (
     <div

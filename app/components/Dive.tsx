@@ -104,11 +104,17 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--sky", sky);
       set("--origo", easeInOut(range(p, PHASES.origo)));
       set("--track", p);
+      // Layers fully covered or faded out stop drawing (see Dive.css).
+      st.classList.toggle("is-rays-off", p > 0.13);
+      st.classList.toggle("is-past-surface", p > PHASES.deep[1] + 0.01);
+      st.classList.toggle("is-past-words", p > PHASES.pass[1]);
+      st.classList.toggle("is-in-sky", p > PHASES.sky[1]);
 
       // Mount the Earth once the statement begins (textures load in time),
       // the sky shortly before the clouds.
       if (p >= PHASES.words[0]) setEarthOn(true);
-      setSkyOn(p >= PHASES.zoom[0] + 0.15);
+      // The sky shader is the heaviest layer: start it just before it shows.
+      setSkyOn(p >= PHASES.sky[0] - 0.04);
 
       const zoom = easeInOut(range(p, PHASES.zoom));
       earth.current.zoom = zoom;
@@ -155,7 +161,7 @@ export default function Dive({ children }: { children: ReactNode }) {
           <ShootingStars className="descent-meteors" active={meteors} />
           {earthOn && <Earth className="descent-earth" view={earth} />}
           <div className="descent-sky">
-            {skyOn && <CloudShader className="h-full min-h-0" />}
+            {skyOn && <CloudShader className="h-full min-h-0" quality={0.45} />}
           </div>
           <div className="descent-mist" />
           {/* ORIGO: the word lights the sky (soft light). */}
@@ -176,8 +182,9 @@ export default function Dive({ children }: { children: ReactNode }) {
                 >
                   {skyOn && (
                     <FluidOrb
-                      size={72}
+                      size={48}
                       color={x.tone}
+                      animate={false}
                       style={{ width: "100%", height: "100%" }}
                     />
                   )}

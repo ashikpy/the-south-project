@@ -281,7 +281,8 @@ export default function Earth({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // 1.5x is sharp on retina screens at ~half the pixels of 2x.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;
     renderer.setClearColor(0x000000, 0);
@@ -293,11 +294,17 @@ export default function Earth({
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 100);
     camera.position.set(0, 0, DIST);
+    // Scroll-driven: draw only when something changed (scroll, a texture
+    // arriving, a resize), not 60 times a second while the page is still.
+    let dirty = true;
 
     const loader = new THREE.TextureLoader();
     const anisotropy = renderer.capabilities.getMaxAnisotropy();
     const load = (name: string, srgb: boolean) => {
-      const t = loader.load(TEX + name, () => renderer.render(scene, camera));
+      const t = loader.load(TEX + name, () => {
+        dirty = true;
+        renderer.render(scene, camera);
+      });
       t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
       t.anisotropy = anisotropy;
       return t;
@@ -321,6 +328,7 @@ export default function Earth({
         const t = loader.load(TEX + l.file, () => {
           levelUniforms[i].value = t;
           arrived[i] = performance.now();
+          dirty = true;
           if (reduced) uLevelOn.value[i] = 1;
           renderer.render(scene, camera);
         });
@@ -522,6 +530,7 @@ export default function Earth({
         holder.scale.setScalar(STATION.length / Math.max(size.x, size.y, size.z));
         station.add(holder);
         stationReady = true;
+        dirty = true;
       });
     }
     const right = new THREE.Vector3();
@@ -543,6 +552,7 @@ export default function Earth({
       fit = w < h ? h / w : 1;
       camera.position.z = DIST * fit;
       camera.updateProjectionMatrix();
+      dirty = true;
       renderer.render(scene, camera);
     };
     const ro = new ResizeObserver(resize);
@@ -555,8 +565,8 @@ export default function Earth({
     io.observe(el);
 
     let raf = 0;
-    let drift = 0;
     let last = performance.now();
+    let lastKey = "";
     const spin = ((Math.PI * 2) / 180) * speed;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
@@ -566,12 +576,16 @@ export default function Earth({
       if (view) {
         const v = view.current;
         if (!v?.on) return;
+        const key = `${v.zoom}|${v.rise}|${v.station}`;
+        const fading = arrived.some((at, i) => at >= 0 && uLevelOn.value[i] < 1);
+        if (key === lastKey && !dirty && !fading) return;
+        lastKey = key;
+        dirty = false;
         const z = Math.min(1, Math.max(0, v.zoom));
-        drift += dt * 0.02 * (1 - z);
         // Turn into place while descending: Africa first, then across the
         // Arabian Sea until southern India comes round to meet you.
-        surface.rotation.y = FACE_Y + turnAt(z) + drift * (1 - z);
-        clouds.rotation.y = surface.rotation.y + 0.03 + drift * 0.3;
+        surface.rotation.y = FACE_Y + turnAt(z);
+        clouds.rotation.y = surface.rotation.y + 0.03;
         globe.rotation.x = FACE_X * Math.pow(z, 0.6);
         globe.rotation.z = TILT * (1 - Math.pow(z, 0.6));
         // Descend on a log scale: the speed feels even all the way down.
