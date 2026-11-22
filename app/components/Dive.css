@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 1250svh; /* 1 screen pinned + 11.5 screens of scroll (TRACK in Dive.tsx) */
+  height: 1500svh; /* 1 screen pinned + 14 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
@@ -29,6 +29,15 @@
   --reveal: 0;
   --settle: 0;
   --push: 0;
+  --rain: 0;
+  --shadow: 0;
+  --dawn: 0;
+  --sunrise: 0;
+  --rainbow: 0;
+  --word-out: 0;
+  --descend: 0;
+  --stream: 0;
+  --onward: 0;
   --track: 0;
 
   position: sticky;
@@ -267,19 +276,6 @@
   scale: calc(1 + var(--cloud, 0) * 0.8);
 }
 
-.origo-idea {
-  position: absolute;
-  top: calc(50% + var(--word) * 0.4 + 24px);
-  margin: 0;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgb(255 255 255 / 0.9);
-  text-shadow: 0 1px 10px rgb(20 40 60 / 0.4);
-  opacity: calc(var(--o) * (1 - var(--cloud, 0) * 3));
-}
-
 /* The heavy cloud bank (CloudBank.tsx), over the sky and the word.
    Coming out of it, it thins and opens past you onto the mountain. */
 .descent-cloud {
@@ -292,14 +288,16 @@
 }
 
 /*
- * ORIGO's mountain: two cut-out layers placed to match the original photo
- * (1672 x 941). The scene box keeps that ratio and covers the screen, so the
- * composition holds at any size. Positions are fractions of the photo:
- *   back   full width, peak top at 14% (its height is eased 0.8x to match the
- *          original's broad, low silhouette), top 2.15%, height 94.76%
- *   front  71% of the height, bottom-aligned, 117.6% wide, centred
+ * ORIGO's mountain: two full-frame layers on one canvas (1671:941), so they
+ * register without any stretching. The scene box keeps that ratio and covers
+ * the screen, so the composition holds at any size.
+ *   back   solid below its ridge to every edge; set 6% lower, which puts the
+ *          peak at 25%: any higher and it hides the R's leg (reads "OPIGO")
+ *   front  as generated; transparent only above the hills
  * Coming out of the cloud the front starts bigger and lower than the back
  * and both settle (--settle), then push slowly in toward the peak (--push).
+ * In the story (Origo.css) the near layer grows from the foot of the frame,
+ * so you sink between its hills (--descend) and on toward the trees (--onward).
  */
 .mountain {
   position: absolute;
@@ -313,10 +311,13 @@
 .mountain-scene {
   position: absolute;
   left: 50%;
-  top: 50%;
+  /* Wider screens crop mostly from the foreground, sparing word and peak. */
+  top: 20%;
   width: max(100%, 177.7svh);
-  aspect-ratio: 1672 / 941;
-  translate: -50% -50%;
+  aspect-ratio: 1671 / 941;
+  /* Descending, the camera also tilts down to the water, which wider
+     screens crop: the cover's focus slides from 20% to 80% of the overflow. */
+  translate: -50% calc(-20% - var(--descend, 0) * (60% - 60svh));
   container-type: inline-size;
 }
 
@@ -330,16 +331,17 @@
 /* The word stands furthest back, behind the peak: it barely moves. */
 .mountain-word {
   position: absolute;
-  inset: 6% 0 auto;
+  /* On narrow screens the word is smaller, so it drops to meet the peak. */
+  inset: max(7.5%, calc(25% - 0.62em)) 0 auto;
   margin: 0;
   font-family: var(--font-red-hat-display), sans-serif;
-  font-size: 21cqw;
+  font-size: min(17cqw, 29vw);
   font-weight: 600;
   line-height: 0.8;
   letter-spacing: -0.075em;
   text-align: center;
   color: rgb(255 255 255 / 0.92);
-  opacity: var(--reveal, 0);
+  opacity: calc(var(--reveal, 0) * (1 - var(--word-out, 0)));
   translate: 0 calc((1 - var(--settle, 0)) * 3%);
   scale: calc(1.04 - 0.04 * var(--settle, 0));
 }
@@ -348,19 +350,18 @@
 .mountain-far {
   position: absolute;
   inset: 0;
-  transform-origin: 51.4% 13%;
-  scale: calc(1.12 - 0.12 * var(--settle, 0) + 0.025 * var(--push, 0));
+  transform-origin: 52.1% 25%;
+  scale: calc(1.12 - 0.12 * var(--settle, 0) + 0.025 * var(--push, 0) + 0.035 * var(--descend, 0) + 0.03 * var(--onward, 0));
   translate: 0 calc((1 - var(--settle, 0)) * 4%);
 }
 
 .mountain-back {
   left: 0;
-  top: 2.15%;
+  top: 6%;
   width: 100%;
-  height: 94.76%;
-  /* Air between you and the peak: a touch paler and softer than the
-     hills in front, so it sits back in the distance. */
-  filter: saturate(0.82) contrast(0.92) brightness(1.04) blur(0.5px);
+  height: 100%;
+  /* Its paler, distant colour (saturate 0.86, brightness 1.03) is baked
+     into the exports: a live filter would redraw 4K on every scroll frame. */
 }
 
 /* Haze pooling at the peak's foot. */
@@ -369,8 +370,8 @@
   inset: 38% 0 18%;
   background: linear-gradient(
     to top,
-    rgb(214 232 246 / 0.8) 0%,
-    rgb(214 232 246 / 0.35) 45%,
+    rgb(214 232 246 / 0.5) 0%,
+    rgb(214 232 246 / 0.2) 45%,
     transparent 100%
   );
 }
@@ -395,17 +396,53 @@
 }
 
 .mountain-front {
-  left: -8.8%;
+  left: 0;
   bottom: 0;
-  width: 117.6%;
-  height: 71%;
-  transform-origin: 50% 100%;
-  scale: calc(1.32 - 0.32 * var(--settle, 0) + 0.05 * var(--push, 0));
-  translate: 0 calc((1 - var(--settle, 0)) * 16%);
+  width: 100%;
+  height: 100%;
+}
+
+/* Near layer: the front image and whatever lies on it move as one. */
+.mountain-near {
+  position: absolute;
+  inset: 0;
+  transform-origin: 54% 100%;
+  scale: calc(1.32 - 0.32 * var(--settle, 0) + 0.05 * var(--push, 0) + 0.17 * var(--descend, 0) + 0.16 * var(--onward, 0));
+  translate: 0 calc((1 - var(--settle, 0)) * 11%);
+}
+
+/* On phones the layers are already enlarged to fill the height: sink less,
+   so they stay sharp. The camera instead tilts down and follows the water,
+   which lifts it clear of the words; the bushes fall away into shade. */
+@media (max-width: 600px) {
+  .mountain-scene {
+    translate: -50% calc(-20% - var(--descend, 0) * (60% - 60svh + 17svh));
+  }
+
+  .mountain-near::after {
+    content: "";
+    position: absolute;
+    inset: 88% 0 -40%;
+    background: linear-gradient(
+      rgb(10 26 16 / 0),
+      rgb(10 26 16 / 0.12) 7%,
+      rgb(10 26 16 / 0.45) 14%,
+      rgb(10 26 16 / 0.85) 19.5%,
+      #0a1a10 22.5%
+    );
+    opacity: min(1, var(--descend, 0) * 8);
+  }
+
+  .mountain-near {
+    translate: calc(var(--descend, 0) * -7%) calc((1 - var(--settle, 0)) * 11%);
+    scale: calc(1.32 - 0.32 * var(--settle, 0) + 0.05 * var(--push, 0) + 0.09 * var(--descend, 0) + 0.06 * var(--onward, 0));
+  }
 }
 
 /* Warm sun high on the left, and a soft vignette to hold the eye. */
 .mountain-light {
+  /* No high sun in the storm, nor while it is rising. */
+  opacity: calc(1 - max(var(--rain, 0), var(--dawn, 0)) * 0.9);
   position: absolute;
   inset: 0;
   pointer-events: none;

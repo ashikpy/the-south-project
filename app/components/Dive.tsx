@@ -8,14 +8,19 @@ import Earth, { earthReadout, type EarthView } from "./Earth";
 import ShootingStars from "./ShootingStars";
 import CloudBank from "./CloudBank";
 import Pentara, { STATEMENT_TOKENS } from "./Pentara";
+import OrigoStory from "./OrigoStory";
+import Lightning from "./Lightning";
+import Rain from "./Rain";
+import River, { type RiverView } from "./River";
 import "./Dive.css";
+import "./Origo.css";
 
 /*
  * Scroll phases, in screens of scroll from the top of the dive (the track is
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 11.5;
+const TRACK = 14;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -37,7 +42,43 @@ const PHASES = {
   reveal: span(9.2, 10.2), // --reveal: out of the cloud, the mountain appears
   settle: span(9.2, 10.6), // --settle: its layers settle at different speeds
   push: span(10.4, 11.5), // --push: a slow push-in toward the peak
+  // ORIGO's story, told through water (Origo.css)
+  wordOut: span(11, 11.35), // --word-out: the big word leaves
+  rainIn: span(11, 11.4), // --rain: cloud over the slopes, light rain
+  rainOut: span(11.75, 12.1), // ...and the sun comes back
+  shadow: span(11, 12.1), // --shadow: the cloud's shadow crosses
+  descend: span(11.6, 12.5), // --descend: down between the front hills
+  stream: span(11.35, 12.3), // --stream: the rain becomes a river, down the valley
+  dawnIn: span(11.8, 12.1), // --dawn: the storm breaks on a sunrise
+  dawnOut: span(12.6, 13.15), // ...which clears to blue, a little gold left
+  sunrise: span(11.85, 13), // --sunrise: the sun climbs from behind the ridge
+  rainbow: span(12.7, 13.2), // --rainbow: then a rainbow, down into the valley
+  onward: span(13.3, 14), // --onward: it pulls you on, into the trees
 };
+
+/*
+ * When each line of the story is up, fades included. They don't overlap, as
+ * they share one place on the slope. The meaning's title spans its two lines.
+ */
+const BEATS = {
+  river: span(10.2, 11.15),
+  rain: span(11.15, 11.95),
+  meaning: span(12, 13.55),
+  person: span(12, 12.9), // the longest line gets the most room
+  people: span(12.9, 13.55),
+  grows: span(13.55, TRACK + 1), // the last stays
+};
+
+/** A mountain layer's exports (public/mountain), for the browser to pick from. */
+const mountainSrcSet = (layer: "back" | "front") =>
+  [1920, 2560, 3840].map((w) => `/mountain/${layer}-${w}.webp ${w}w`).join(", ");
+/*
+ * How wide a layer is drawn: the scene covers the screen, so on all but wide
+ * screens its width follows the height (178vh, plus the final push-in). On
+ * portrait screens most of it is off screen, so ask for less.
+ */
+const MOUNTAIN_SIZES =
+  "(max-width: 600px) and (max-resolution: 2.5dppx) 140vh, (max-width: 600px) 100vh, (max-width: 1100px) and (orientation: portrait) 130vh, (max-aspect-ratio: 16/9) 183vh, 103vw";
 
 /** The five expressions, in the order they are met. */
 const PENTARA = [
@@ -58,11 +99,16 @@ const easeInOut = (t: number) =>
 const easeIn = (t: number) => t * t * t;
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
+/** Up over the first 0.18 screens of a beat, down over the last. */
+const beat = (p: number, [from, to]: Range) =>
+  easeInOut(Math.min(range(p, [from, from + screens(0.18)]), 1 - range(p, [to - screens(0.18), to])));
+
 /**
  * The dive: the hero pins while you scroll, the ocean zooms toward the deep
  * and goes to ink, Pentara is introduced, then you swim through it out into
  * space. The Earth turns to meet you and you descend to southern India,
- * through the cloud tops, into the sky.
+ * through the cloud tops, into the sky, and out of a cloud bank onto ORIGO's
+ * mountain, whose story is told through water.
  *
  * One scroll listener turns the position on the track into a few 0–1
  * variables; the DOM motion is transform and opacity, driven from CSS. The
@@ -85,6 +131,9 @@ export default function Dive({ children }: { children: ReactNode }) {
   const cloudP = useRef(0);
   const [cloudOn, setCloudOn] = useState(false);
   const [mountainOn, setMountainOn] = useState(false);
+  const rainAmount = useRef(0);
+  const river = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
+  const flash = useRef<HTMLDivElement>(null); // lightning's light on the land
 
   useEffect(() => {
     const el = track.current;
@@ -126,6 +175,30 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--settle", easeOut(range(p, PHASES.settle)));
       set("--push", easeInOut(range(p, PHASES.push)));
       if (p >= PHASES.origo[0]) setMountainOn(true);
+
+      const rain = easeInOut(range(p, PHASES.rainIn)) * (1 - easeInOut(range(p, PHASES.rainOut)));
+      rainAmount.current = rain;
+      set("--rain", rain);
+      const dawn = easeInOut(range(p, PHASES.dawnIn)) * (1 - easeInOut(range(p, PHASES.dawnOut)));
+      set("--dawn", dawn);
+      set("--sunrise", easeOut(range(p, PHASES.sunrise)));
+      set("--rainbow", easeInOut(range(p, PHASES.rainbow)));
+      set("--shadow", range(p, PHASES.shadow));
+      set("--word-out", easeInOut(range(p, PHASES.wordOut)));
+      set("--descend", easeInOut(range(p, PHASES.descend)));
+      const flow = range(p, PHASES.stream);
+      set("--stream", flow);
+      river.current.flow = flow;
+      river.current.dawn = dawn;
+      river.current.rain = rain;
+      set("--onward", easeInOut(range(p, PHASES.onward)));
+      let reading = 0;
+      for (const [name, when] of Object.entries(BEATS)) {
+        const shown = beat(p, when);
+        reading = Math.max(reading, shown);
+        set(`--beat-${name}`, shown);
+      }
+      set("--reading", reading);
       set("--track", p);
       // Layers fully covered or faded out stop drawing (see Dive.css).
       st.classList.toggle("is-rays-off", p > screens(1.04));
@@ -155,7 +228,8 @@ export default function Dive({ children }: { children: ReactNode }) {
       }
       earth.current.on = p > PHASES.space[0] - screens(0.16) && sky < 1;
 
-      state.current.track = p;
+      // In screens, scaled: the specks rise at one speed however long the track.
+      state.current.track = (p * TRACK) / 11.5;
       // The specks become stars in space and are lost in the sky.
       state.current.deep = deep * (1 - sky);
       state.current.forward = range(p, PHASES.forward) * 1.6;
@@ -190,7 +264,6 @@ export default function Dive({ children }: { children: ReactNode }) {
           {/* ORIGO: the word lights the sky (soft light). */}
           <div className="origo">
             <p className="origo-word">ORIGO</p>
-            <p className="origo-idea">Origin · Mountains</p>
           </div>
 
           {/* ORIGO's mountain, behind the cloud bank: two layers set to the
@@ -198,21 +271,61 @@ export default function Dive({ children }: { children: ReactNode }) {
           {mountainOn && (
             <div className="mountain">
               <div className="mountain-scene">
+                {/* The sky, back to front, all behind the peak: storm,
+                    lightning, then the sunrise. */}
+                <div className="origo-overcast" />
+                <div className="origo-storm" />
+                <Lightning className="origo-lightning" amount={rainAmount} flash={flash} />
+                <div className="origo-dawn" />
+                <div className="origo-sun" />
                 <p className="mountain-word">ORIGO</p>
                 {/* The far layer: the peak, the haze at its foot and the
                     valley mist drifting in front of it, moving together. */}
                 <div className="mountain-far">
-                  {/* Plain img: pre-optimised WebP layers, sized and stretched
-                      by CSS to match the original photo; next/image adds nothing. */}
+                  {/* Plain img: pre-optimised WebP layers sharing one canvas,
+                      placed by CSS; next/image adds nothing. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="mountain-back" src="/mountain/back.webp" alt="" decoding="async" />
+                  <img
+                    className="mountain-back"
+                    sizes={MOUNTAIN_SIZES}
+                    srcSet={mountainSrcSet("back")}
+                    src="/mountain/back-2560.webp"
+                    alt=""
+                    decoding="async"
+                  />
                   <div className="mountain-haze" />
                   <div className="mountain-mist" />
                 </div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="mountain-front" src="/mountain/front.webp" alt="" decoding="async" />
+                <div className="origo-sunlight" />
+                {/* In the rain between you and the mountain, so it crosses
+                    the slopes and lands behind the front hills. */}
+                <div className="origo-rainbow" />
+                <div className="origo-valley-mist" />
+                {/* The near layer: the hills, and the stream lying on them. */}
+                <div className="mountain-near">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="mountain-front"
+                    sizes={MOUNTAIN_SIZES}
+                    srcSet={mountainSrcSet("front")}
+                    src="/mountain/front-2560.webp"
+                    alt=""
+                    decoding="async"
+                  />
+                  {/* The stream: water cut round the trees and bushes of
+                      the front image, and the current moving on it (River.tsx). */}
+                  <div className="origo-stream">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/mountain/stream.webp" alt="" decoding="async" />
+                    <River className="origo-river" view={river} />
+                  </div>
+                </div>
               </div>
               <div className="mountain-light" />
+              <div className="origo-shadow" />
+              <div className="origo-warmth" />
+              <div className="origo-flash" ref={flash} />
+              <Rain className="origo-rain" amount={rainAmount} />
             </div>
           )}
 
@@ -254,6 +367,7 @@ export default function Dive({ children }: { children: ReactNode }) {
           </div>
         </div>
         <Pentara />
+        <OrigoStory />
       </div>
     </div>
   );

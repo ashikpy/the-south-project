@@ -1,0 +1,311 @@
+/*
+ * ORIGO's story, told through water, on the mountain (Dive.css has the scene).
+ *   --rain      the weather: cloud, shadow, rain; up and back down (0–1–0)
+ *   --word-out  the big word leaves
+ *   --descend   the camera sinks between the front hills
+ *   --stream    the stream runs down the valley
+ *   --dawn      the storm breaks on a sunrise (0–1–0)
+ *   --sunrise   how far the sun has climbed
+ *   --rainbow   then the rainbow, which stays
+ *   --onward    it pulls you on, down toward the trees
+ *   --beat-*    each line of the story
+ */
+
+/* ---------- Weather ---------- */
+
+/* Cloud fills the sky behind the peak; its edge stays soft and uneven. */
+.origo-overcast {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 34% 22% at 18% 16%, rgb(232 238 242 / 0.8), transparent),
+    radial-gradient(ellipse 40% 18% at 74% 10%, rgb(224 231 237 / 0.7), transparent),
+    linear-gradient(#566a7b, #a7b8c4 62%);
+  opacity: calc(var(--rain, 0) * 0.94);
+}
+
+/* A cloud's shadow crossing the slopes as you scroll. */
+.origo-shadow {
+  position: absolute;
+  inset: 25% -80% -10%;
+  background: radial-gradient(closest-side, rgb(8 24 34 / 0.62), rgb(8 24 34 / 0.34) 60%, transparent);
+  opacity: var(--rain, 0);
+  translate: calc((var(--shadow, 0) - 0.5) * 55%) 0;
+}
+
+/* The valley fills with mist while it rains. */
+.origo-valley-mist {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 200%;
+  height: 36%;
+  background: url("/mountain/mist.webp") repeat-x 0 0 / 50% 100%;
+  opacity: var(--rain, 0);
+  translate: calc(var(--shadow, 0) * -12%) 0;
+}
+
+.origo-rain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Heavy cloud, torn underneath, rolling slowly over as you scroll. */
+.origo-storm {
+  position: absolute;
+  left: -8%;
+  top: -3%;
+  width: 116%;
+  height: 62%;
+  background: url("/mountain/storm.webp") center / 100% 100% no-repeat;
+  opacity: var(--rain, 0);
+  translate: calc((var(--shadow, 0) - 0.5) * 8%) calc((var(--rain, 0) - 1) * 18%);
+}
+
+/* Both dark between strikes: Lightning.tsx animates their opacity. */
+.origo-lightning,
+.origo-flash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+.origo-flash {
+  background:
+    radial-gradient(ellipse 45% 75% at var(--flash-x, 50%) 18%, rgb(205 222 255 / 0.36), transparent),
+    rgb(170 195 235 / 0.07);
+}
+
+/* ---------- After the rain: sunrise, then a rainbow ---------- */
+
+.origo-dawn {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#5d6b9c 0%, #9885a5 15%, #e3a08c 27%, #ffc477 37%, #ffe3a3 48%);
+  opacity: var(--dawn, 0);
+}
+
+/*
+ * The sun starts hidden behind the left shoulder (its ridge is at 38% here)
+ * and climbs 13.5cqw, 24% of the scene's height. Its disc is behind the
+ * mountain; .origo-sunlight is the light that spills over the ridge.
+ */
+.origo-sun,
+.origo-sunlight {
+  position: absolute;
+  left: 39.5%;
+  top: 46%;
+  width: 56cqw;
+  aspect-ratio: 1;
+  translate: -50% calc(-50% - var(--sunrise, 0) * 13.5cqw);
+  opacity: var(--dawn, 0);
+}
+
+.origo-sun {
+  background: radial-gradient(
+    closest-side,
+    #fffdf2 0 5.2%,
+    rgb(255 236 170 / 0.95) 6.6%,
+    rgb(255 205 115 / 0.5) 15%,
+    rgb(255 175 95 / 0.18) 40%,
+    transparent
+  );
+}
+
+.origo-sunlight {
+  background: radial-gradient(
+    closest-side,
+    rgb(255 226 150 / 0.36),
+    rgb(255 190 105 / 0.17) 30%,
+    transparent 80%
+  );
+}
+
+/* On phones the camera tilts up the frame: a lower sun clears the logo. */
+@media (max-width: 600px) {
+  .origo-sun,
+  .origo-sunlight {
+    translate: -50% calc(-50% - var(--sunrise, 0) * 9.5cqw);
+  }
+}
+
+/* Low sun on the land: golden, deeper at the edges. */
+.origo-warmth {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 20%, rgb(255 150 60 / 0.16) 55%, rgb(70 28 24 / 0.22));
+  opacity: var(--dawn, 0);
+}
+
+.origo-rainbow {
+  position: absolute;
+  inset: 0;
+  background: url("/mountain/rainbow.webp") center / 100% 100% no-repeat;
+  opacity: var(--rainbow, 0);
+}
+
+/* ---------- The river ---------- */
+
+/* Image and canvas are one crop of the front layer's 3840×2162 canvas
+   (x 1740–3240, y 1680–2162), so they are placed by those numbers. */
+.origo-stream {
+  position: absolute;
+  left: 45.3125%;
+  top: 77.7058%;
+  width: 39.0625%;
+  height: 22.2942%;
+  /* It runs downhill: revealed from the gap to the foot of the frame. */
+  clip-path: inset(0 0 calc((1 - var(--stream, 0)) * 92%) 0);
+  opacity: calc(var(--stream, 0) * 6);
+}
+
+.origo-stream img,
+.origo-river {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- The words ---------- */
+
+.origo-story {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  color: #f3ece4;
+  font-family: var(--font-red-hat-display), sans-serif;
+  pointer-events: none;
+}
+
+/* Shade in the lower left, only while there is something to read. */
+.origo-story::before {
+  content: "";
+  position: absolute;
+  inset: 40% 0 0;
+  background: radial-gradient(ellipse 75% 100% at 8% 100%, rgb(4 17 12 / 0.78) 25%, transparent);
+  opacity: var(--reading, 0);
+}
+
+/* Short screens: the words reach higher, so the shade does too. */
+@media (max-height: 500px) {
+  .origo-story::before {
+    inset: 18% 0 0;
+  }
+}
+
+.origo-line,
+.origo-meaning {
+  position: absolute;
+  left: max(20px, 4vw);
+  bottom: clamp(92px, 13svh, 128px);
+  width: min(88vw, 15.5em);
+  margin: 0;
+  font-size: clamp(25px, min(3.3vw, 5.6svh), 58px);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.origo-line {
+  --show: 0;
+  opacity: var(--show);
+  translate: 0 calc((1 - var(--show)) * 14px);
+}
+
+.origo-line span {
+  display: block;
+}
+
+.origo-line-river {
+  --show: var(--beat-river, 0);
+}
+
+.origo-line-rain {
+  --show: var(--beat-rain, 0);
+}
+
+.origo-line-person {
+  --show: var(--beat-person, 0);
+}
+
+.origo-line-people {
+  --show: var(--beat-people, 0);
+}
+
+.origo-line-grows {
+  --show: var(--beat-grows, 0);
+}
+
+.origo-meaning-title {
+  margin: 0 0 0.8em;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  opacity: var(--beat-meaning, 0);
+}
+
+/* Both thoughts share one cell, so the title above them holds still. */
+.origo-meaning-lines {
+  display: grid;
+  align-items: start;
+}
+
+.origo-meaning .origo-line {
+  position: static;
+  grid-area: 1 / 1;
+  width: auto;
+  font-size: inherit;
+}
+
+/* ---------- Reduced motion: the story, still and all at once ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .origo-story {
+    position: relative;
+    order: 2; /* after the Earth */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 40px;
+    min-height: 100svh;
+    padding: 96px max(20px, 4vw) 72px;
+    background:
+      linear-gradient(rgb(4 17 12 / 0.5), rgb(4 17 12 / 0.78)),
+      url("/mountain/back-1920.webp") center / cover,
+      #10231b;
+  }
+
+  .origo-story::before {
+    display: none;
+  }
+
+  .origo-line,
+  .origo-meaning {
+    position: static;
+  }
+
+  .origo-story .origo-line {
+    opacity: 1;
+    translate: none;
+  }
+
+  .origo-meaning-title {
+    opacity: 1;
+  }
+
+  .origo-meaning-lines {
+    gap: 24px;
+  }
+
+  .origo-meaning .origo-line {
+    grid-area: auto;
+  }
+}
