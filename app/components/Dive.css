@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 900svh; /* 1 screen pinned + 8 screens of scroll */
+  height: 1250svh; /* 1 screen pinned + 11.5 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
@@ -25,6 +25,10 @@
   --mist: 0;
   --sky: 0;
   --origo: 0;
+  --cloud: 0;
+  --reveal: 0;
+  --settle: 0;
+  --push: 0;
   --track: 0;
 
   position: sticky;
@@ -257,8 +261,10 @@
   letter-spacing: -0.08em;
   color: #fff;
   mix-blend-mode: soft-light;
-  opacity: var(--o);
+  /* Flying into the cloud bank, you pass through the word. */
+  opacity: calc(var(--o) * (1 - var(--cloud, 0) * 1.6));
   translate: 0 calc((1 - var(--o)) * 6svh);
+  scale: calc(1 + var(--cloud, 0) * 0.8);
 }
 
 .origo-idea {
@@ -271,7 +277,147 @@
   text-transform: uppercase;
   color: rgb(255 255 255 / 0.9);
   text-shadow: 0 1px 10px rgb(20 40 60 / 0.4);
-  opacity: var(--o);
+  opacity: calc(var(--o) * (1 - var(--cloud, 0) * 3));
+}
+
+/* The heavy cloud bank (CloudBank.tsx), over the sky and the word.
+   Coming out of it, it thins and opens past you onto the mountain. */
+.descent-cloud {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: calc(1 - var(--reveal, 0));
+  scale: calc(1 + var(--reveal, 0) * 0.3);
+}
+
+/*
+ * ORIGO's mountain: two cut-out layers placed to match the original photo
+ * (1672 x 941). The scene box keeps that ratio and covers the screen, so the
+ * composition holds at any size. Positions are fractions of the photo:
+ *   back   full width, peak top at 14% (its height is eased 0.8x to match the
+ *          original's broad, low silhouette), top 2.15%, height 94.76%
+ *   front  71% of the height, bottom-aligned, 117.6% wide, centred
+ * Coming out of the cloud the front starts bigger and lower than the back
+ * and both settle (--settle), then push slowly in toward the peak (--push).
+ */
+.mountain {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgb(91 169 248) 0%, rgb(150 205 253) 75%);
+  /* Hidden until the white-out covers it, so it never shows early. */
+  opacity: calc((var(--cloud, 0) - 0.8) * 5);
+}
+
+.mountain-scene {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 177.7svh);
+  aspect-ratio: 1672 / 941;
+  translate: -50% -50%;
+  container-type: inline-size;
+}
+
+.mountain-scene img {
+  position: absolute;
+  max-width: none;
+  object-fit: fill;
+  user-select: none;
+}
+
+/* The word stands furthest back, behind the peak: it barely moves. */
+.mountain-word {
+  position: absolute;
+  inset: 6% 0 auto;
+  margin: 0;
+  font-family: var(--font-red-hat-display), sans-serif;
+  font-size: 21cqw;
+  font-weight: 600;
+  line-height: 0.8;
+  letter-spacing: -0.075em;
+  text-align: center;
+  color: rgb(255 255 255 / 0.92);
+  opacity: var(--reveal, 0);
+  translate: 0 calc((1 - var(--settle, 0)) * 3%);
+  scale: calc(1.04 - 0.04 * var(--settle, 0));
+}
+
+/* Far layer: settles a little, then pushes in gently. */
+.mountain-far {
+  position: absolute;
+  inset: 0;
+  transform-origin: 51.4% 13%;
+  scale: calc(1.12 - 0.12 * var(--settle, 0) + 0.025 * var(--push, 0));
+  translate: 0 calc((1 - var(--settle, 0)) * 4%);
+}
+
+.mountain-back {
+  left: 0;
+  top: 2.15%;
+  width: 100%;
+  height: 94.76%;
+  /* Air between you and the peak: a touch paler and softer than the
+     hills in front, so it sits back in the distance. */
+  filter: saturate(0.82) contrast(0.92) brightness(1.04) blur(0.5px);
+}
+
+/* Haze pooling at the peak's foot. */
+.mountain-haze {
+  position: absolute;
+  inset: 38% 0 18%;
+  background: linear-gradient(
+    to top,
+    rgb(214 232 246 / 0.8) 0%,
+    rgb(214 232 246 / 0.35) 45%,
+    transparent 100%
+  );
+}
+
+/* Valley mist drifting slowly across (a seamless tile, twice as wide as
+   the frame, moved by half its width). */
+.mountain-mist {
+  position: absolute;
+  left: 0;
+  top: 46%;
+  width: 200%;
+  height: 34%;
+  background: url("/mountain/mist.webp") repeat-x 0 0 / 50% 100%;
+  opacity: calc(var(--reveal, 0) * 0.9);
+  animation: mountain-mist 140s linear infinite;
+}
+
+@keyframes mountain-mist {
+  to {
+    translate: -50% 0;
+  }
+}
+
+.mountain-front {
+  left: -8.8%;
+  bottom: 0;
+  width: 117.6%;
+  height: 71%;
+  transform-origin: 50% 100%;
+  scale: calc(1.32 - 0.32 * var(--settle, 0) + 0.05 * var(--push, 0));
+  translate: 0 calc((1 - var(--settle, 0)) * 16%);
+}
+
+/* Warm sun high on the left, and a soft vignette to hold the eye. */
+.mountain-light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 14% 4%, rgb(255 244 214 / 0.55), transparent 38%),
+    radial-gradient(ellipse at 50% 42%, transparent 58%, rgb(8 28 18 / 0.32) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mountain-mist {
+    animation: none;
+  }
 }
 
 /* The five orbs: met ones shine, the rest wait faded. */
@@ -437,6 +583,8 @@
   .descent-sky,
   .descent-mist,
   .descent-meteors,
+  .descent-cloud,
+  .mountain,
   .origo,
   .collect,
   .descent-hud {
