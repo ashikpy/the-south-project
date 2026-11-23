@@ -12,6 +12,7 @@ import OrigoStory from "./OrigoStory";
 import Lightning from "./Lightning";
 import Rain from "./Rain";
 import River, { type RiverView } from "./River";
+import Silva, { SilvaSky, SilvaTitle } from "./Silva";
 import "./Dive.css";
 import "./Origo.css";
 
@@ -20,7 +21,7 @@ import "./Origo.css";
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 14;
+const TRACK = 17;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -54,6 +55,14 @@ const PHASES = {
   sunrise: span(11.85, 13), // --sunrise: the sun climbs from behind the ridge
   rainbow: span(12.7, 13.2), // --rainbow: then a rainbow, down into the valley
   onward: span(13.3, 14), // --onward: it pulls you on, into the trees
+  // Into SILVA, one drone shot (Silva.css)
+  fly: span(14, 15.1), // --fly: forward, low over the river
+  bank: span(14.2, 15.8), // --bank: it leans into the climb, and levels (0–1–0)
+  look: span(14.5, 15.6), // --look: it pitches up, from the valley to the canopy
+  rush: span(14.65, 15.75), // --rush: it climbs, leaves whipping past the lens
+  grow: span(14.8, 15.85), // --grow: leaves grow in from every edge
+  silvaWord: span(15.5, 16.15), // --silva-word: SILVA out of the depth, its orb lights
+  close: span(16.4, 17), // --close: they close over you, into deep green
 };
 
 /*
@@ -66,7 +75,7 @@ const BEATS = {
   meaning: span(12, 13.55),
   person: span(12, 12.9), // the longest line gets the most room
   people: span(12.9, 13.55),
-  grows: span(13.55, TRACK + 1), // the last stays
+  grows: span(13.55, 14.35), // leaves as the drone moves off
 };
 
 /** A mountain layer's exports (public/mountain), for the browser to pick from. */
@@ -88,7 +97,7 @@ const PENTARA = [
   { name: "CULTURA", tone: "#B49355" },
   { name: "TENAX", tone: "#A65F45" },
 ];
-/** Met so far by the end of the dive: NEXIO (the ocean) and ORIGO. */
+/** Met on arriving at ORIGO: NEXIO (the ocean) and ORIGO. SILVA's lights later. */
 const UNLOCKED = 2;
 
 type Range = readonly [number, number];
@@ -96,6 +105,7 @@ const range = (p: number, [from, to]: Range) =>
   Math.min(1, Math.max(0, (p - from) / (to - from)));
 const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeSine = (t: number) => (1 - Math.cos(Math.PI * t)) / 2;
 const easeIn = (t: number) => t * t * t;
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
@@ -108,7 +118,8 @@ const beat = (p: number, [from, to]: Range) =>
  * and goes to ink, Pentara is introduced, then you swim through it out into
  * space. The Earth turns to meet you and you descend to southern India,
  * through the cloud tops, into the sky, and out of a cloud bank onto ORIGO's
- * mountain, whose story is told through water.
+ * mountain, whose story is told through water. Then a drone shot carries
+ * you over the river and up into SILVA's canopy, which closes over you.
  *
  * One scroll listener turns the position on the track into a few 0–1
  * variables; the DOM motion is transform and opacity, driven from CSS. The
@@ -131,6 +142,7 @@ export default function Dive({ children }: { children: ReactNode }) {
   const cloudP = useRef(0);
   const [cloudOn, setCloudOn] = useState(false);
   const [mountainOn, setMountainOn] = useState(false);
+  const [canopyOn, setCanopyOn] = useState(false);
   const rainAmount = useRef(0);
   const river = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
   const flash = useRef<HTMLDivElement>(null); // lightning's light on the land
@@ -188,7 +200,8 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--descend", easeInOut(range(p, PHASES.descend)));
       const flow = range(p, PHASES.stream);
       set("--stream", flow);
-      river.current.flow = flow;
+      const lookedUp = p >= PHASES.look[1];
+      river.current.flow = lookedUp ? 0 : flow; // out of sight: stop drawing
       river.current.dawn = dawn;
       river.current.rain = rain;
       set("--onward", easeInOut(range(p, PHASES.onward)));
@@ -199,6 +212,19 @@ export default function Dive({ children }: { children: ReactNode }) {
         set(`--beat-${name}`, shown);
       }
       set("--reading", reading);
+
+      // SILVA's images start loading during ORIGO's rain.
+      if (p >= PHASES.rainIn[0]) setCanopyOn(true);
+      set("--fly", easeInOut(range(p, PHASES.fly)));
+      set("--bank", Math.sin(Math.PI * easeSine(range(p, PHASES.bank))));
+      set("--look", easeSine(range(p, PHASES.look)));
+      set("--rush", range(p, PHASES.rush));
+      set("--grow", range(p, PHASES.grow));
+      set("--silva-word", easeInOut(range(p, PHASES.silvaWord)));
+      set("--close", easeSine(range(p, PHASES.close)));
+      st.classList.toggle("is-looking-up", lookedUp);
+      st.classList.toggle("is-canopy", p > PHASES.look[0]);
+      st.classList.toggle("is-shut", p >= PHASES.close[1]);
       set("--track", p);
       // Layers fully covered or faded out stop drawing (see Dive.css).
       st.classList.toggle("is-rays-off", p > screens(1.04));
@@ -270,6 +296,7 @@ export default function Dive({ children }: { children: ReactNode }) {
               original photo's composition, settling at different speeds. */}
           {mountainOn && (
             <div className="mountain">
+              {canopyOn && <SilvaSky />}
               <div className="mountain-scene">
                 {/* The sky, back to front, all behind the peak: storm,
                     lightning, then the sunrise. */}
@@ -332,6 +359,8 @@ export default function Dive({ children }: { children: ReactNode }) {
           {/* Into a heavy cloud bank: the curtain before the mountains. */}
           {cloudOn && <CloudBank className="descent-cloud" progress={cloudP} />}
 
+          {canopyOn && <Silva />}
+
           {/* The five expressions: those met so far shine, the rest wait,
               faded, until you reach them. */}
           <div className="collect">
@@ -339,7 +368,7 @@ export default function Dive({ children }: { children: ReactNode }) {
               {PENTARA.map((x, i) => (
                 <li
                   key={x.name}
-                  className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}`}
+                  className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}${x.name === "SILVA" ? " is-silva" : ""}`}
                   title={x.name}
                 >
                   {(skyOn || cloudOn || mountainOn) && (
@@ -368,6 +397,7 @@ export default function Dive({ children }: { children: ReactNode }) {
         </div>
         <Pentara />
         <OrigoStory />
+        <SilvaTitle />
       </div>
     </div>
   );

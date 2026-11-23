@@ -17,7 +17,10 @@ import { cn } from '@/lib/utils'
 export type FluidOrbProps = React.ComponentProps<'div'> & {
   size?: number
   color?: string
-  /** Changed from upstream: false draws one still frame (no loop). */
+  /**
+   * Changed from upstream: false draws one still frame (no loop) and gives
+   * its WebGL context straight back, as browsers allow only about 16.
+   */
   animate?: boolean
 }
 
@@ -134,7 +137,9 @@ const FluidOrb = ({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const gl = canvas.getContext('webgl', { antialias: true, alpha: true })
+    // Changed from upstream: a still orb is drawn off screen, then copied.
+    const target = animate ? canvas : document.createElement('canvas')
+    const gl = target.getContext('webgl', { antialias: true, alpha: true })
     if (!gl) return
 
     const program = gl.createProgram()
@@ -168,8 +173,8 @@ const FluidOrb = ({
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const px = Math.round(size * dpr)
-    canvas.width = px
-    canvas.height = px
+    target.width = px
+    target.height = px
     gl.viewport(0, 0, px, px)
     gl.uniform2f(uResolution, px, px)
 
@@ -184,6 +189,14 @@ const FluidOrb = ({
       if (!reduce) raf = requestAnimationFrame(render)
     }
     render(start)
+
+    if (!animate) {
+      canvas.width = px
+      canvas.height = px
+      canvas.getContext('2d')?.drawImage(target, 0, 0)
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
+      return
+    }
 
     return () => {
       cancelAnimationFrame(raf)
@@ -205,7 +218,8 @@ const FluidOrb = ({
       }}
       {...props}
     >
-      <canvas ref={canvasRef} className="h-full w-full" />
+      {/* Keyed, as a canvas can't switch between WebGL and 2D. */}
+      <canvas key={String(animate)} ref={canvasRef} className="h-full w-full" />
     </div>
   )
 }

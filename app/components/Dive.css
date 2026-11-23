@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 1500svh; /* 1 screen pinned + 14 screens of scroll (TRACK in Dive.tsx) */
+  height: 1800svh; /* 1 screen pinned + 17 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
@@ -38,6 +38,13 @@
   --descend: 0;
   --stream: 0;
   --onward: 0;
+  --fly: 0;
+  --bank: 0;
+  --look: 0;
+  --rush: 0;
+  --grow: 0;
+  --silva-word: 0;
+  --close: 0;
   --track: 0;
 
   position: sticky;
@@ -441,8 +448,8 @@
 
 /* Warm sun high on the left, and a soft vignette to hold the eye. */
 .mountain-light {
-  /* No high sun in the storm, nor while it is rising. */
-  opacity: calc(1 - max(var(--rain, 0), var(--dawn, 0)) * 0.9);
+  /* No high sun in the storm, nor while it is rising; SILVA's sky has its own. */
+  opacity: calc((1 - max(var(--rain, 0), var(--dawn, 0)) * 0.9) * (1 - var(--look, 0)));
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -490,6 +497,11 @@
 
 .collect-slot.is-unlocked {
   opacity: 1;
+}
+
+/* SILVA's lights as its word arrives. */
+.collect-slot.is-silva {
+  opacity: calc(0.28 + 0.72 * var(--silva-word, 0));
 }
 
 /* Travel readout: small mono type at the foot of the frame, as in the hero. */
