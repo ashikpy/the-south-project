@@ -12,7 +12,8 @@ import OrigoStory from "./OrigoStory";
 import Lightning from "./Lightning";
 import Rain from "./Rain";
 import River, { type RiverView } from "./River";
-import Silva, { SilvaSky, SilvaTitle } from "./Silva";
+import Silva, { SilvaSky, SilvaStory } from "./Silva";
+import SilvaForest from "./SilvaForest";
 import "./Dive.css";
 import "./Origo.css";
 
@@ -21,7 +22,7 @@ import "./Origo.css";
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 17;
+const TRACK = 22;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -62,7 +63,29 @@ const PHASES = {
   rush: span(14.65, 15.75), // --rush: it climbs, leaves whipping past the lens
   grow: span(14.8, 15.85), // --grow: leaves grow in from every edge
   silvaWord: span(15.5, 16.15), // --silva-word: SILVA out of the depth, its orb lights
-  close: span(16.4, 17), // --close: they close over you, into deep green
+  close: span(16.3, 16.9), // --close: the camera pushes up into the sun
+  // Inside SILVA, by the stream (SilvaForest.css)
+  glare: span(16.3, 16.9), // --glare: the sun's glare fills the lens; the cut is under it
+  glareBack: span(16.9, 17.6), // --glare-back: it draws back into the gap the beams come through
+  sink: span(16.88, 17.75), // --sink: leaves rush up past you as you drop through the canopy
+  level: span(16.9, 17.85), // --level: the forest rises to eye level
+  focus: span(17.5, 18.7), // --focus: focus pulls from the ferns to the forest
+  walk: span(17.4, 21.8), // --walk: on along the stream
+  unfurl: span(19.4, 20.3), // --unfurl: the fern by SILVA's meaning unfurls
+  gold: span(21.1, 22), // --gold: the light warms, toward the farmlands
+};
+
+/*
+ * SILVA's story, in the forest, as BEATS above. Apart from them, as it has
+ * its own shade (--silva-reading).
+ */
+const SILVA_BEATS = {
+  slow: span(17.8, 18.55),
+  feeds: span(18.55, 19.35),
+  meaning: span(19.35, 21),
+  person: span(19.35, 20.15),
+  people: span(20.15, 21), // the longest line gets the most room
+  onward: span(21, 21.9), // as the light turns gold
 };
 
 /*
@@ -119,7 +142,8 @@ const beat = (p: number, [from, to]: Range) =>
  * space. The Earth turns to meet you and you descend to southern India,
  * through the cloud tops, into the sky, and out of a cloud bank onto ORIGO's
  * mountain, whose story is told through water. Then a drone shot carries
- * you over the river and up into SILVA's canopy, which closes over you.
+ * you over the river and up into SILVA's canopy, which closes over you, and
+ * you come down inside the forest, by the same stream.
  *
  * One scroll listener turns the position on the track into a few 0–1
  * variables; the DOM motion is transform and opacity, driven from CSS. The
@@ -143,6 +167,9 @@ export default function Dive({ children }: { children: ReactNode }) {
   const [cloudOn, setCloudOn] = useState(false);
   const [mountainOn, setMountainOn] = useState(false);
   const [canopyOn, setCanopyOn] = useState(false);
+  const [forestOn, setForestOn] = useState(false);
+  const [inForest, setInForest] = useState(false);
+  const forestRiver = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
   const rainAmount = useRef(0);
   const river = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
   const flash = useRef<HTMLDivElement>(null); // lightning's light on the land
@@ -222,9 +249,31 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--grow", range(p, PHASES.grow));
       set("--silva-word", easeInOut(range(p, PHASES.silvaWord)));
       set("--close", easeSine(range(p, PHASES.close)));
+      const back = easeOut(range(p, PHASES.glareBack));
+      set("--glare", easeIn(range(p, PHASES.glare)) * (1 - back));
+      set("--glare-back", back);
+      set("--sink", range(p, PHASES.sink));
       st.classList.toggle("is-looking-up", lookedUp);
       st.classList.toggle("is-canopy", p > PHASES.look[0]);
-      st.classList.toggle("is-shut", p >= PHASES.close[1]);
+      if (p >= PHASES.grow[0]) setForestOn(true);
+      set("--level", easeOut(range(p, PHASES.level)));
+      set("--focus", easeInOut(range(p, PHASES.focus)));
+      set("--walk", easeInOut(range(p, PHASES.walk)));
+      set("--unfurl", easeInOut(range(p, PHASES.unfurl)));
+      set("--gold", easeSine(range(p, PHASES.gold)));
+      let silvaReading = 0;
+      for (const [name, when] of Object.entries(SILVA_BEATS)) {
+        const shown = beat(p, when);
+        silvaReading = Math.max(silvaReading, shown);
+        set(`--beat-silva-${name}`, shown);
+      }
+      set("--silva-reading", silvaReading);
+      st.classList.toggle("is-forest", p > PHASES.glare[0]);
+      // The cut, at the glare's height: the canopy goes, the forest is there.
+      const forest = p >= PHASES.glareBack[0];
+      st.classList.toggle("is-in-forest", forest);
+      setInForest(forest);
+      forestRiver.current.flow = forest ? 1 : 0;
       set("--track", p);
       // Layers fully covered or faded out stop drawing (see Dive.css).
       st.classList.toggle("is-rays-off", p > screens(1.04));
@@ -360,6 +409,7 @@ export default function Dive({ children }: { children: ReactNode }) {
           {cloudOn && <CloudBank className="descent-cloud" progress={cloudP} />}
 
           {canopyOn && <Silva />}
+          {forestOn && <SilvaForest river={forestRiver} lit={inForest} />}
 
           {/* The five expressions: those met so far shine, the rest wait,
               faded, until you reach them. */}
@@ -397,7 +447,7 @@ export default function Dive({ children }: { children: ReactNode }) {
         </div>
         <Pentara />
         <OrigoStory />
-        <SilvaTitle />
+        <SilvaStory />
       </div>
     </div>
   );

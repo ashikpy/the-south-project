@@ -6,7 +6,8 @@
  *   --rush        it climbs, leaves whipping past the lens
  *   --grow        leaves grow in from every edge, each after its own delay
  *   --silva-word  SILVA comes out of the depth; its orb lights
- *   --close       they close over the camera, into deep SILVA green
+ *   --close       the camera pushes up into the sun as its glare fills the
+ *                 lens; under it, the cut to the forest (SilvaForest.css)
  *
  * The pitch is a real camera's. perspective(f) translateZ(f) rotate
  * translateZ(-f) turns the world about the eye, f from the screen, so the
@@ -101,14 +102,6 @@
   visibility: visible;
 }
 
-/* Fully shut: nothing under the green needs drawing. */
-.dive-stage.is-shut .silva-layer,
-.dive-stage.is-shut .silva-word,
-.dive-stage.is-shut .silva-lens,
-.dive-stage.is-shut .silva-drift {
-  visibility: hidden;
-}
-
 /* The climb carries you on into the canopy, the nearest fastest. The
    pointer shifts each depth by its own amount (--mx, --my: -1 to 1). */
 .silva-layer {
@@ -125,29 +118,36 @@
     scale(calc(1 + var(--rush, 0) * var(--climb)));
 }
 
+/* Pushing up into the sun: every depth flies apart from it, the nearest
+   fastest, so you go through the leaves into the light. */
+.silva-burst {
+  position: absolute;
+  inset: 0;
+  transform-origin: var(--sun-x) var(--sun-y);
+  scale: calc(1 + var(--close, 0) * var(--close, 0) * var(--burst));
+}
+
 .silva-far {
+  --burst: 0.9;
   --k: 0.4;
   --climb: 0;
   --shift: 0.5;
 }
 
 .silva-mid {
+  --burst: 1.9;
   --k: 0.8;
   --climb: 0.05;
   --shift: 1.4;
 }
 
 .silva-near {
+  --burst: 3.4;
   --k: 1.3;
   --climb: 0.16;
   --shift: 2.8;
 }
 
-.silva-closer {
-  --k: 0;
-  --climb: 0;
-  --shift: 3.4;
-}
 
 .silva-leaf {
   --g: clamp(0, (var(--grow, 0) - var(--delay)) * 1.6, 1);
@@ -180,9 +180,6 @@
   --g: clamp(0, ((var(--grow, 0) - 0.4) * 1.667 - var(--delay)) * 1.6, 1);
 }
 
-.silva-closer .silva-leaf {
-  --g: clamp(0, (var(--close, 0) - var(--delay)) * 1.8, 1);
-}
 
 @media (max-aspect-ratio: 4/5) {
   .silva {
@@ -518,52 +515,11 @@
   }
 }
 
-/* Shut: SILVA's green (#536B50), taken deep. */
-.silva-deep {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 75% at 50% 45%, #2c422d, #132216 75%, #0d1810);
-  opacity: clamp(0, (var(--close, 0) - 0.62) * 2.64, 1);
-}
 
-/* ---------- For screen readers, and reduced motion ---------- */
-
-.silva-still {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
+/* ---------- Reduced motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
   .silva {
     display: none;
-  }
-
-  .silva-still {
-    position: relative;
-    order: 3; /* after ORIGO's story */
-    display: grid;
-    place-items: center;
-    width: auto;
-    height: auto;
-    min-height: 80svh;
-    clip-path: none;
-    color: rgb(255 255 255 / 0.92);
-    background:
-      url("/silva/banana-shade.webp") left -8vw bottom -4vw / 46vw auto no-repeat,
-      url("/silva/fern-shade.webp") left -10vw top -6vw / 40vw auto no-repeat,
-      radial-gradient(ellipse 80% 75% at 50% 45%, #536b50, #132216);
-  }
-
-  .silva-still h2 {
-    margin: 0;
-    font-family: var(--font-red-hat-display), sans-serif;
-    font-size: 22vw;
-    font-weight: 600;
-    line-height: 0.8;
-    letter-spacing: -0.06em;
   }
 }

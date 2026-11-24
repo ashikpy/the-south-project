@@ -21,11 +21,30 @@ void main() {
 }
 `;
 
+/** Where the water lies in its scene's image, in that image's pixels. */
+export interface RiverPlace {
+  /** the stream's box: x, y, width, height */
+  crop: readonly [number, number, number, number];
+  /** height of the horizon the ground plane runs to */
+  horizon: number;
+  /** across: where the water comes from, far off */
+  centre: number;
+  /** heights between which it is seen edge-on, far to near (sunrise sheen) */
+  far: readonly [number, number];
+}
+
 /*
- * Works in the front layer's 3840x2162 canvas: the crop is x 1740-3240,
+ * ORIGO's, in the front layer's 3840x2162 canvas: the crop is x 1740-3240,
  * y 1680-2162, and ripples lie on a ground plane with its horizon at y 1640,
  * so they are tiny far off, long and low up close, and come toward you.
  */
+const ORIGO: RiverPlace = {
+  crop: [1740, 1680, 1500, 482],
+  horizon: 1640,
+  centre: 2400,
+  far: [1760, 2160],
+};
+
 const FRAG = `
 precision highp float;
 varying vec2 v_uv;
@@ -33,6 +52,10 @@ uniform sampler2D u_mask;
 uniform float u_time;
 uniform float u_dawn;
 uniform float u_rain;
+uniform vec4 u_crop;
+uniform float u_horizon;
+uniform float u_centre;
+uniform vec2 u_far;
 
 float hash(vec2 p) {
   p = fract(p * vec2(0.1031, 0.1030));
@@ -54,9 +77,9 @@ void main() {
   float water = texture2D(u_mask, v_uv).r;
   if (water < 0.01) discard;
 
-  vec2 p = vec2(1740.0, 1680.0) + v_uv * vec2(1500.0, 482.0);
-  float depth = max(p.y - 1640.0, 12.0);
-  vec2 ground = vec2((p.x - 2400.0) / depth * 7.0, 15000.0 / depth);
+  vec2 p = u_crop.xy + v_uv * u_crop.zw;
+  float depth = max(p.y - u_horizon, 12.0);
+  vec2 ground = vec2((p.x - u_centre) / depth * 7.0, 15000.0 / depth);
   float t = u_time * (1.0 + u_rain * 0.6);
 
   // Broad swells, and fine ripples running a little faster over them.
@@ -68,7 +91,7 @@ void main() {
   float trough = (1.0 - smoothstep(0.22, 0.4, n)) * 0.3;
   // At sunrise the water mirrors the bright sky: strongest far off, where
   // you see it edge-on, broken by the swell nearer you.
-  float far = 1.0 - smoothstep(1760.0, 2160.0, p.y);
+  float far = 1.0 - smoothstep(u_far.x, u_far.y, p.y);
   float path = smoothstep(0.56, 0.68, n) * (0.55 + far * 0.3);
   float sheen = u_dawn * max(far * far * 0.85, path);
 
@@ -87,16 +110,24 @@ void main() {
 const FRAME = 1000 / 30; // water needs no more
 
 /**
- * The river's moving light, over its baked image (stream.webp) and only where
- * stream-mask.webp says there is open water. It draws only while the river
- * shows, at 30fps; under reduced motion the baked image is all there is.
+ * The river's moving light, over the water in its scene's image and only
+ * where the mask says there is open water. It draws only while the river
+ * shows, at 30fps; under reduced motion the image is all there is.
+ * ORIGO's is the default; SILVA's forest stream passes its own.
  */
 export default function River({
   view,
   className,
+  mask: maskSrc = "/mountain/stream-mask.webp",
+  place = ORIGO,
+  size = [1200, 386],
 }: {
   view: RefObject<RiverView>;
   className?: string;
+  mask?: string;
+  place?: RiverPlace;
+  /** drawing size, in pixels */
+  size?: readonly [number, number];
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -143,11 +174,15 @@ export default function River({
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask);
       ready = true;
     };
-    mask.src = "/mountain/stream-mask.webp";
+    mask.src = maskSrc;
 
     const uTime = gl.getUniformLocation(program, "u_time");
     const uDawn = gl.getUniformLocation(program, "u_dawn");
     const uRain = gl.getUniformLocation(program, "u_rain");
+    gl.uniform4f(gl.getUniformLocation(program, "u_crop"), ...place.crop);
+    gl.uniform1f(gl.getUniformLocation(program, "u_horizon"), place.horizon);
+    gl.uniform1f(gl.getUniformLocation(program, "u_centre"), place.centre);
+    gl.uniform2f(gl.getUniformLocation(program, "u_far"), ...place.far);
     gl.viewport(0, 0, el.width, el.height);
 
     const start = performance.now();
@@ -174,7 +209,7 @@ export default function River({
       gl.deleteProgram(program);
       shaders.forEach((shader) => gl.deleteShader(shader));
     };
-  }, [view]);
+  }, [view, maskSrc, place]);
 
-  return <canvas ref={canvas} className={className} width={1200} height={386} aria-hidden="true" />;
+  return <canvas ref={canvas} className={className} width={size[0]} height={size[1]} aria-hidden="true" />;
 }

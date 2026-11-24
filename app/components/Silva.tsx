@@ -23,7 +23,7 @@ const STEM = {
   vine: 51.3,
 } as const;
 type Plant = keyof typeof STEM;
-type Depth = "far" | "mid" | "near" | "closer";
+type Depth = "far" | "mid" | "near";
 
 /*
  * [stem x %, stem y %, degrees (0 points right, 90 down), length].
@@ -36,7 +36,7 @@ interface Leaf {
   depth: Depth;
   wide: Spot;
   tall: Spot;
-  /** When it sets off, 0–0.375 of the growing (or, for closers, the closing) */
+  /** When it sets off, 0–0.375 of the growing */
   delay: number;
   /** -1 mirrors it about its spine */
   flip?: -1;
@@ -110,16 +110,9 @@ const LEAVES: Leaf[] = [
   { plant: "palm", depth: "near", wide: [110, 50, 200, 48], tall: [118, 24, 148, 56], delay: 0.35, flip: -1 },
   { plant: "vine", depth: "near", wide: [40, 112, 300, 40], tall: [40, 108, 290, 60], delay: 0.31 },
 
-  // Closers: come only as the canopy shuts over you, reaching past the middle.
-  { plant: "banana", depth: "closer", wide: [-8, 12, 22, 135], tall: [-20, 8, 52, 170], delay: 0 },
-  { plant: "banana", depth: "closer", wide: [108, 88, 201, 135], tall: [120, 94, 232, 170], delay: 0.05 },
-  { plant: "palm", depth: "closer", wide: [72, -18, 110, 120], tall: [110, 14, 148, 165], delay: 0.1, flip: -1 },
-  { plant: "banana", depth: "closer", wide: [28, 120, 292, 130], tall: [-16, 86, 328, 165], delay: 0.14, flip: -1 },
-  { plant: "taro", depth: "closer", wide: [108, 22, 163, 115], tall: [60, -12, 98, 150], delay: 0.18 },
-  { plant: "banana", depth: "closer", wide: [-8, 82, 341, 115], tall: [44, 112, 274, 150], delay: 0.22 },
 ];
 
-const IMAGE = { far: "shade", mid: "lit", near: "near", closer: "near" } as const;
+const IMAGE = { far: "shade", mid: "lit", near: "near" } as const;
 
 /*
  * Leaves whipping past the lens on the climb, in true perspective:
@@ -205,17 +198,20 @@ function placed({ plant, wide, tall, delay, flip }: Leaf, i: number) {
 function Layer({ depth }: { depth: Depth }) {
   return (["over", "under"] as const).map((half) => (
     <div key={half} className={`silva-layer silva-${depth} is-${half}`}>
-      {LEAVES.map(
-        (leaf, i) =>
-          leaf.depth === depth &&
-          (leaf.wide[1] < 50) === (half === "over") && (
-            <div className="silva-leaf" key={i} style={placed(leaf, i)}>
-              {/* Plain img: small pre-baked layers, turned and scaled by CSS. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/silva/${leaf.plant}-${IMAGE[depth]}.webp`} alt="" decoding="async" />
-            </div>
-          ),
-      )}
+      {/* Flies apart from the sun as the camera pushes up into its glare. */}
+      <div className="silva-burst">
+        {LEAVES.map(
+          (leaf, i) =>
+            leaf.depth === depth &&
+            (leaf.wide[1] < 50) === (half === "over") && (
+              <div className="silva-leaf" key={i} style={placed(leaf, i)}>
+                {/* Plain img: small pre-baked layers, turned and scaled by CSS. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/silva/${leaf.plant}-${IMAGE[depth]}.webp`} alt="" decoding="async" />
+              </div>
+            ),
+        )}
+      </div>
     </div>
   ));
 }
@@ -243,7 +239,9 @@ export default function Silva() {
   useEffect(() => {
     const el = root.current;
     if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const stage = el.closest(".dive-stage");
+    // On the stage, so the forest after the canopy moves with it too.
+    const stage = el.closest<HTMLElement>(".dive-stage");
+    if (!stage) return;
     let x = 0;
     let y = 0;
     let tx = 0;
@@ -252,12 +250,12 @@ export default function Silva() {
     const step = () => {
       x += (tx - x) * 0.07;
       y += (ty - y) * 0.07;
-      el.style.setProperty("--mx", x.toFixed(4));
-      el.style.setProperty("--my", y.toFixed(4));
+      stage.style.setProperty("--mx", x.toFixed(4));
+      stage.style.setProperty("--my", y.toFixed(4));
       raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.002 ? requestAnimationFrame(step) : 0;
     };
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType !== "mouse" || !stage?.classList.contains("is-canopy")) return;
+      if (e.pointerType !== "mouse" || !stage.classList.contains("is-canopy")) return;
       tx = (e.clientX / window.innerWidth) * 2 - 1;
       ty = (e.clientY / window.innerHeight) * 2 - 1;
       if (!raf) raf = requestAnimationFrame(step);
@@ -352,7 +350,6 @@ export default function Silva() {
           />
         ))}
       </div>
-      <Layer depth="closer" />
       <div className="silva-lens">
         {LENS.map(([x, y, angle, length, flip, outX, outY, delay], i) => (
           <i
@@ -380,19 +377,77 @@ export default function Silva() {
           </i>
         ))}
       </div>
-      <div className="silva-deep" />
     </div>
   );
 }
 
-/**
- * The heading for screen readers, outside the decorative scene. Under
- * reduced motion it becomes a still SILVA panel after ORIGO's story.
+/*
+ * A fern frond, drawn as by a pen with --unfurl: the stem rises and its tip
+ * curls into a crozier, then the leaflets open in pairs, lowest first.
  */
-export function SilvaTitle() {
+const FERN_STEM = (() => {
+  let d = "M30 118 C31 96 29 70 27 46";
+  for (let i = 1; i <= 40; i++) {
+    const t = i / 40;
+    const turn = Math.PI + t * Math.PI * 2.6;
+    const r = 9 * (1 - t * 0.82);
+    d += ` L${(36 + r * Math.cos(turn)).toFixed(2)} ${(46 + r * Math.sin(turn)).toFixed(2)}`;
+  }
+  return d;
+})();
+/** [where on the stem (y), reach]: each a pair, shorter toward the tip. */
+const FERN_LEAVES = [
+  [108, 22],
+  [96, 20],
+  [84, 17],
+  [72, 14],
+  [61, 10],
+] as const;
+/** The stem leans a little: where it is at a height. */
+const stemX = (y: number) => 27 + (y - 46) / 24;
+
+/**
+ * SILVA's story, one thought to a screen, told like ORIGO's: the place, the
+ * water, what SILVA means, what The South Project does with it, then on to
+ * the farmlands. Outside the decorative scene, so screen readers and reduced
+ * motion get it as plain text. Dive.tsx fades each line (SILVA_BEATS there).
+ */
+export function SilvaStory() {
   return (
-    <section className="silva-still" aria-labelledby="silva-title">
-      <h2 id="silva-title">SILVA</h2>
+    <section className="origo-story silva-story" aria-labelledby="silva-story-title">
+      <p className="origo-line silva-line-slow">Down here, the river slows.</p>
+      <p className="origo-line silva-line-feeds">
+        <span>Everything the mountain sent down,</span> <span>the forest turns into life.</span>
+      </p>
+      <div className="origo-meaning">
+        <svg className="silva-fern" viewBox="0 0 64 122" aria-hidden="true">
+          <path d={FERN_STEM} pathLength={1} />
+          {FERN_LEAVES.map(([y, reach], i) =>
+            [-1, 1].map((side) => {
+              const x = stemX(y);
+              return (
+                <path
+                  key={`${i}${side}`}
+                  className="silva-fern-leaf"
+                  style={{ "--i": i } as CSSProperties}
+                  d={`M${x} ${y} Q${x + side * reach * 0.55} ${y - reach * 0.2} ${x + side * reach} ${y - reach * 0.55}`}
+                  pathLength={1}
+                />
+              );
+            }),
+          )}
+        </svg>
+        <h2 className="origo-meaning-title" id="silva-story-title">
+          SILVA — Growth
+        </h2>
+        <div className="origo-meaning-lines">
+          <p className="origo-line silva-line-person">Nothing in a forest grows alone.</p>
+          <p className="origo-line silva-line-people">
+            The South Project gives ideas the same: shelter, patience, and each other.
+          </p>
+        </div>
+      </div>
+      <p className="origo-line silva-line-onward">What grows here is ready to be made real.</p>
     </section>
   );
 }

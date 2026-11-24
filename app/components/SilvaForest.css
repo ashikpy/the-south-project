@@ -1,0 +1,305 @@
+/*
+ * Inside SILVA (SilvaForest.tsx).
+ *   --glare  the sun's glare fills the lens; the cut happens under it
+ *   --glare-back  ...and it draws back into the gap the beams come through
+ *   --sink   leaves rush up past the lens as you drop through the canopy
+ *   --level  the forest rises to eye level
+ *   --focus  focus pulls from the ferns at the lens to the forest
+ *   --walk   on along the stream: the near layer moves most
+ *   --gold   the light warms, toward the farmlands
+ * The pointer shifts each layer by its depth (--mx, --my: -1 to 1).
+ */
+
+.forest {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* The glare shows over the canopy; the forest itself only after the cut. */
+.dive-stage.is-forest .forest {
+  visibility: visible;
+}
+
+.forest-scene,
+.forest-gold {
+  visibility: hidden;
+}
+
+.dive-stage.is-in-forest .forest-scene,
+.dive-stage.is-in-forest .forest-gold {
+  visibility: visible;
+}
+
+/* In the forest, what lies under it needs no drawing. */
+.dive-stage.is-canopy.is-in-forest .silva,
+.dive-stage.is-in-forest .mountain {
+  visibility: hidden;
+}
+
+/* Out of the light: it starts deep in the gap the beams come through and
+   pulls back to the whole forest. Never smaller than the screen. */
+.forest-scene {
+  --low: calc(1 - var(--level, 0));
+
+  position: absolute;
+  inset: 0;
+  transform-origin: 36% 4%;
+  transform: scale(calc(1 + var(--low) * var(--low) * 1.3));
+}
+
+/* Both layers share one 16:9 canvas that covers the screen. */
+.forest-canvas,
+.forest-mist {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100vw, 177.78svh);
+  height: max(100svh, 56.25vw);
+}
+
+.forest-canvas img,
+.forest-motes {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
+
+.forest-back {
+  transform-origin: 40% 64%;
+  transform: scale(calc(1.04 + var(--walk, 0) * 0.1));
+  translate: calc(-50% + var(--mx, 0) * -0.8vmin) calc(-50% + var(--my, 0) * -0.8vmin);
+}
+
+/* Out of focus first, while the ferns at the lens are sharp. */
+.forest-back .forest-soft {
+  opacity: calc(1 - var(--focus, 0));
+}
+
+/* A little low, so its foot never lifts off the bottom. */
+.forest-near {
+  top: calc(50% + 3svh);
+  transform-origin: 50% 100%;
+  transform: translateY(calc(var(--walk, 0) * 9%)) scale(calc(1.02 + var(--walk, 0) * 0.4));
+  translate: calc(-50% + var(--mx, 0) * -3.2vmin) calc(-50% + var(--my, 0) * -2vmin);
+}
+
+.forest-near .forest-soft {
+  opacity: min(1, var(--focus, 0) * 2);
+}
+
+.forest-near .forest-sharp {
+  opacity: min(1, (1 - var(--focus, 0)) * 2);
+}
+
+/* ---------- Water ---------- */
+
+.forest-stream {
+  position: absolute;
+  left: 26.7708%; /* 1028 / 3840 */
+  top: 66.8519%; /* 1444 / 2160 */
+  width: 56.0417%; /* 2152 / 3840 */
+  height: 33.1481%; /* 716 / 2160 */
+}
+
+.forest-stream canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- Light ---------- */
+
+/* Centred on the gap the sun comes through (36% across the canvas). */
+.forest-beams {
+  position: absolute;
+  top: 0;
+  left: -14%;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: screen;
+  opacity: calc(var(--level, 0) * 0.85);
+}
+
+/* ---------- Mist, low over the water ---------- */
+
+.forest-mist {
+  overflow: hidden;
+  transform-origin: 40% 70%;
+  transform: scale(calc(1.04 + var(--walk, 0) * 0.22));
+  translate: calc(-50% + var(--mx, 0) * -1.6vmin) -50%;
+  opacity: calc(var(--level, 0) * 0.32);
+  pointer-events: none;
+}
+
+.forest-mist i {
+  position: absolute;
+  left: 0;
+  top: 62%;
+  width: 200%;
+  height: 24%;
+  background: url("/silva/forest/mist.webp") 0 0 / 50% 100% repeat-x;
+}
+
+.forest-mist i + i {
+  top: 72%;
+  height: 20%;
+  opacity: 0.7;
+}
+
+.dive-stage.is-forest .forest-mist i {
+  animation: forest-mist 140s linear infinite;
+}
+
+.dive-stage.is-forest .forest-mist i + i {
+  animation-duration: 95s;
+  animation-direction: reverse;
+}
+
+@keyframes forest-mist {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- Through the glare ---------- */
+
+/* From the canopy's sun to the gap the beams come through, growing to fill
+   the lens and then drawing back. At its height it is solid, so the cut
+   under it never shows. */
+.forest-glare {
+  --gx: calc(var(--sun-x) + (36% - var(--sun-x)) * var(--glare-back, 0));
+  --gy: calc(var(--sun-y) + (-4% - var(--sun-y)) * var(--glare-back, 0));
+
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle calc(var(--glare, 0) * 120vmax + 1px) at var(--gx) var(--gy),
+    rgb(255 253 242) 0 18%,
+    rgb(255 247 222 / 0.92) 34%,
+    rgb(255 238 196 / 0.45) 62%,
+    rgb(255 230 180 / 0.12) 82%,
+    transparent
+  );
+  opacity: min(1, var(--glare, 0) * 1.4);
+}
+
+.forest-glare::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(255 250 232);
+  opacity: clamp(0, (var(--glare, 0) - 0.82) * 5.6, 1);
+}
+
+/* Dark against the light, out of focus, gone upward past the lens. */
+.forest-sink {
+  --su: 1vmax;
+}
+
+@media (max-aspect-ratio: 4/5) {
+  .forest-sink {
+    --su: 1.35vw;
+  }
+}
+
+.forest-sink img {
+  --t: clamp(0, (var(--sink, 0) - var(--when)) * 1.9, 1);
+
+  position: absolute;
+  top: 100%;
+  max-width: none;
+  opacity: min(1, var(--t) * 14, (1 - var(--t)) * 10);
+  transform: translate(-50%, calc(var(--t) * -240svh)) rotate(calc(var(--a) + var(--t) * 18deg))
+    scale(calc(1.1 + var(--t) * 0.7));
+}
+
+/* ---------- Toward the farmlands ---------- */
+
+.forest-gold {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 90% 70% at 36% 8%, rgb(255 206 120 / 0.55), transparent 70%),
+    linear-gradient(to top, rgb(180 147 85 / 0.5), transparent 65%);
+  mix-blend-mode: soft-light;
+  opacity: var(--gold, 0);
+}
+
+/* ---------- SILVA's words ---------- */
+
+/* Set like ORIGO's (Origo.css), with its own shade. It lies over ORIGO's
+   words, so it must never take ORIGO's --reading (hence the two classes). */
+.origo-story.silva-story::before {
+  opacity: var(--silva-reading, 0);
+}
+
+.silva-story .origo-meaning-title {
+  opacity: var(--beat-silva-meaning, 0);
+}
+
+.silva-story .silva-line-slow {
+  --show: var(--beat-silva-slow, 0);
+}
+
+.silva-story .silva-line-feeds {
+  --show: var(--beat-silva-feeds, 0);
+}
+
+.silva-story .silva-line-person {
+  --show: var(--beat-silva-person, 0);
+}
+
+.silva-story .silva-line-people {
+  --show: var(--beat-silva-people, 0);
+}
+
+.silva-story .silva-line-onward {
+  --show: var(--beat-silva-onward, 0);
+}
+
+/* A fern frond unfurling, drawn as by a pen: growth, in a line. */
+.silva-fern {
+  display: block;
+  width: clamp(40px, 3.4vw, 56px);
+  height: auto;
+  margin-bottom: 20px;
+  overflow: visible;
+  fill: none;
+  stroke: rgb(243 236 228 / 0.85);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - clamp(0, var(--unfurl, 0) * 1.8, 1));
+  opacity: var(--beat-silva-meaning, 0);
+}
+
+.silva-fern-leaf {
+  stroke-dashoffset: calc(1 - clamp(0, (var(--unfurl, 0) - 0.4 - var(--i) * 0.09) * 4, 1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .silva-story {
+    order: 3; /* after ORIGO's */
+    background:
+      linear-gradient(rgb(4 17 12 / 0.4), rgb(4 17 12 / 0.8)),
+      url("/silva/forest/back-1920.webp") center / cover,
+      #10231b;
+  }
+
+  .silva-story .origo-meaning-title {
+    opacity: 1;
+  }
+
+  .silva-fern,
+  .silva-fern-leaf {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
