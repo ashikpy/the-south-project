@@ -14,6 +14,8 @@ import Rain from "./Rain";
 import River, { type RiverView } from "./River";
 import Silva, { SilvaSky, SilvaStory } from "./Silva";
 import SilvaForest from "./SilvaForest";
+import Cultura from "./Cultura";
+import type { PlaneView } from "./Plane";
 import "./Dive.css";
 import "./Origo.css";
 
@@ -22,7 +24,7 @@ import "./Origo.css";
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 22;
+const TRACK = 25;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -73,6 +75,12 @@ const PHASES = {
   walk: span(17.4, 21.8), // --walk: on along the stream
   unfurl: span(19.4, 20.3), // --unfurl: the fern by SILVA's meaning unfurls
   gold: span(21.1, 22), // --gold: the light warms, toward the farmlands
+  // CULTURA, in the air (Cultura.css): a match cut on the water
+  riverIn: span(21.75, 22.4), // --river-in: into the forest stream, until it is all light
+  riverOut: span(22.4, 23.3), // --river-out: out of it, over the farmland river from high up
+  arrive: span(22.85, 23.55), // the plane sweeps in beside you (Plane.tsx)
+  flyOff: span(23.55, 24.8), // ...then pulls ahead and flies off
+  culturaWord: span(24, 24.7), // --cultura-word: CULTURA in the sky; its orb lights
 };
 
 /*
@@ -85,7 +93,7 @@ const SILVA_BEATS = {
   meaning: span(19.35, 21),
   person: span(19.35, 20.15),
   people: span(20.15, 21), // the longest line gets the most room
-  onward: span(21, 21.9), // as the light turns gold
+  onward: span(20.95, 21.75), // as the light turns gold
 };
 
 /*
@@ -170,6 +178,8 @@ export default function Dive({ children }: { children: ReactNode }) {
   const [forestOn, setForestOn] = useState(false);
   const [inForest, setInForest] = useState(false);
   const forestRiver = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
+  const [culturaOn, setCulturaOn] = useState(false);
+  const plane = useRef<PlaneView>({ on: false, arrive: 0, away: 0 });
   const rainAmount = useRef(0);
   const river = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
   const flash = useRef<HTMLDivElement>(null); // lightning's light on the land
@@ -270,10 +280,24 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--silva-reading", silvaReading);
       st.classList.toggle("is-forest", p > PHASES.glare[0]);
       // The cut, at the glare's height: the canopy goes, the forest is there.
-      const forest = p >= PHASES.glareBack[0];
+      // The cut, under the light on the water.
+      const cultura = p >= PHASES.riverIn[1];
+      const forest = p >= PHASES.glareBack[0] && !cultura;
       st.classList.toggle("is-in-forest", forest);
       setInForest(forest);
       forestRiver.current.flow = forest ? 1 : 0;
+      if (p >= PHASES.walk[0]) setCulturaOn(true);
+      const riverIn = easeIn(range(p, PHASES.riverIn));
+      const riverOut = easeOut(range(p, PHASES.riverOut));
+      set("--river-in", riverIn);
+      set("--river-out", riverOut);
+      set("--sheen", cultura ? 1 - riverOut : riverIn);
+      plane.current.on = p > PHASES.arrive[0];
+      plane.current.arrive = easeOut(range(p, PHASES.arrive));
+      plane.current.away = range(p, PHASES.flyOff);
+      set("--cultura-word", easeInOut(range(p, PHASES.culturaWord)));
+      st.classList.toggle("is-cultura", p > PHASES.riverIn[0]);
+      st.classList.toggle("is-in-cultura", cultura);
       set("--track", p);
       // Layers fully covered or faded out stop drawing (see Dive.css).
       st.classList.toggle("is-rays-off", p > screens(1.04));
@@ -410,6 +434,7 @@ export default function Dive({ children }: { children: ReactNode }) {
 
           {canopyOn && <Silva />}
           {forestOn && <SilvaForest river={forestRiver} lit={inForest} />}
+          {culturaOn && <Cultura plane={plane} />}
 
           {/* The five expressions: those met so far shine, the rest wait,
               faded, until you reach them. */}
@@ -418,7 +443,7 @@ export default function Dive({ children }: { children: ReactNode }) {
               {PENTARA.map((x, i) => (
                 <li
                   key={x.name}
-                  className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}${x.name === "SILVA" ? " is-silva" : ""}`}
+                  className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}${x.name === "SILVA" ? " is-silva" : ""}${x.name === "CULTURA" ? " is-cultura" : ""}`}
                   title={x.name}
                 >
                   {(skyOn || cloudOn || mountainOn) && (

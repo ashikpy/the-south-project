@@ -1,0 +1,174 @@
+/*
+ * CULTURA, in the air (Cultura.tsx).
+ *   --river-in      the camera pushes into the forest stream, its light
+ *                   growing until the screen is gold on water
+ *   --river-out     ...which opens out into the farmland river from high up
+ *   --sheen         that light on the water, the cut hidden at its height
+ *   --cultura-word  CULTURA in the sky as the plane leaves; its orb lights
+ * The pointer shifts the layers by depth (--mx, --my: -1 to 1).
+ */
+
+.cultura {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.dive-stage.is-cultura .cultura {
+  visibility: visible;
+}
+
+/* Into the stream: the forest closes in on the water. */
+.dive-stage.is-cultura .forest {
+  transform-origin: 50% 86%;
+  scale: calc(1 + var(--river-in, 0) * 5);
+}
+
+/* Past the cut, nothing behind needs drawing. */
+.dive-stage.is-forest.is-in-cultura .forest,
+.dive-stage.is-canopy.is-in-cultura .silva,
+.dive-stage.is-in-cultura .mountain {
+  visibility: hidden;
+}
+
+/* Out of the light on the water, the river from high up: the camera pulls
+   back from it to the whole of the farmlands. */
+.cultura-scene {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  /* The evening sky and the fields' colours, until the image is decoded. */
+  background: linear-gradient(#e7a258, #b98d4c 30%, #5e6a36 60%, #3c4a27);
+}
+
+.cultura-zoom {
+  position: absolute;
+  inset: 0;
+  transform-origin: 54% 53%;
+  scale: calc(1 + (1 - var(--river-out, 0)) * 5);
+}
+
+.dive-stage.is-in-cultura .cultura-scene {
+  visibility: visible;
+}
+
+/* The fields slide slowly back as you fly on. */
+.cultura-ground {
+  position: absolute;
+  inset: -6% -10%;
+  translate: calc(var(--mx, 0) * -0.6vmin) calc(var(--my, 0) * -0.4vmin);
+}
+
+.cultura-ground img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+  object-position: 40% 30%;
+}
+
+.dive-stage.is-cultura .cultura-ground img {
+  animation: cultura-fly 70s linear infinite alternate;
+}
+
+@keyframes cultura-fly {
+  from {
+    translate: -4% 0;
+  }
+  to {
+    translate: 4% 0.6%;
+  }
+}
+
+/* Thin cloud below, faster than the fields: it is nearer. */
+.cultura-clouds {
+  position: absolute;
+  inset: 52% 0 0;
+  overflow: hidden;
+  opacity: 0.6;
+  translate: calc(var(--mx, 0) * -1.6vmin) 0;
+}
+
+.cultura-clouds i {
+  position: absolute;
+  left: 0;
+  top: 10%;
+  width: 300%;
+  height: 70%;
+  background: url("/cultura/clouds.webp") 0 0 / 33.333% 100% repeat-x;
+}
+
+.cultura-clouds i + i {
+  top: 40%;
+  height: 80%;
+  opacity: 0.6;
+}
+
+.dive-stage.is-cultura .cultura-clouds i {
+  animation: cultura-cloud 46s linear infinite;
+}
+
+.dive-stage.is-cultura .cultura-clouds i + i {
+  animation-duration: 30s;
+}
+
+@keyframes cultura-cloud {
+  from {
+    transform: translateX(-33.333%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Set like ORIGO's, low in the evening sky, as the plane leaves. */
+.cultura-word {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  margin: 0;
+  font-family: var(--font-red-hat-display), sans-serif;
+  font-size: min(19vw, 30svh);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  color: rgb(255 246 228 / 0.92);
+  text-shadow: 0 0 0.35em rgb(255 180 100 / 0.4);
+  translate: calc(-50% + var(--mx, 0) * -0.4vmin) calc((1 - var(--cultura-word, 0)) * 0.2em);
+  opacity: var(--cultura-word, 0);
+}
+
+.cultura-plane {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Light on the water: from the stream's glints, filling the screen at the
+   cut, then drawing back into the river below. Solid at its height. */
+.cultura-sheen {
+  --at: 50% 86%;
+
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at var(--at), rgb(255 252 236) 0 18%, rgb(255 236 190 / 0.9) 40%, rgb(240 200 130 / 0.55) 70%, rgb(220 170 100 / 0.3)),
+    rgb(250 228 180 / calc(clamp(0, (var(--sheen, 0) - 0.75) * 4, 1)));
+  opacity: var(--sheen, 0);
+}
+
+.dive-stage.is-in-cultura .cultura-sheen {
+  --at: 54% 53%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cultura {
+    display: none;
+  }
+}

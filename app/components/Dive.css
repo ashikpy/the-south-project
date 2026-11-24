@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 2300svh; /* 1 screen pinned + 22 screens of scroll (TRACK in Dive.tsx) */
+  height: 2600svh; /* 1 screen pinned + 25 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
@@ -500,6 +500,10 @@
 }
 
 /* SILVA's lights as its word arrives. */
+.collect-slot.is-cultura {
+  opacity: calc(0.28 + 0.72 * var(--cultura-word, 0));
+}
+
 .collect-slot.is-silva {
   opacity: calc(0.28 + 0.72 * var(--silva-word, 0));
 }
