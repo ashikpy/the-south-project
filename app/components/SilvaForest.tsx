@@ -210,6 +210,8 @@ export default function SilvaForest({
             )}
           </div>
           <Motes />
+          {/* Something passing over the canopy: its shadow crosses the gap. */}
+          <div className="forest-flyover" />
         </div>
         <div className="forest-mist">
           <i />

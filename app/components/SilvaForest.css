@@ -124,7 +124,24 @@
   width: 100%;
   height: 100%;
   mix-blend-mode: screen;
-  opacity: calc(var(--level, 0) * 0.85);
+  /* They dim as the plane's shadow crosses the gap. */
+  opacity: calc(var(--level, 0) * 0.85 * (1 - var(--flyover-dip, 0) * 0.75));
+}
+
+/* A plane's shadow, high in the canopy, crossing the light. */
+.forest-flyover {
+  position: absolute;
+  left: 0;
+  top: 2%;
+  width: 34%;
+  height: 22%;
+  background:
+    radial-gradient(ellipse 48% 9% at 50% 50%, rgb(4 12 6 / 0.75), transparent 72%),
+    radial-gradient(ellipse 9% 46% at 58% 50%, rgb(4 12 6 / 0.7), transparent 72%);
+  mix-blend-mode: multiply;
+  translate: calc(-40% + var(--flyover, 0) * 290%) calc(var(--flyover, 0) * 30%);
+  rotate: 8deg;
+  opacity: min(1, var(--flyover, 0) * 6, (1 - var(--flyover, 0)) * 6);
 }
 
 /* ---------- Mist, low over the water ---------- */

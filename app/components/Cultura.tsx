@@ -8,12 +8,13 @@ import "./Cultura.css";
 const GROUND = [1920, 2560].map((w) => `/cultura/ground-${w}.webp ${w}w`).join(", ");
 
 /**
- * CULTURA, in the air. The water carries you there: the camera pushes into
- * the forest stream until it is all light, and pulls back out of the same
- * light on the farmland river, seen from high up. A King Air sweeps in
- * beside you, then flies off toward the low sun, and CULTURA lights the sky.
- * Dive.tsx drives it with --river-in, --river-out, --sheen, --cultura-word
- * and the plane's own view (Plane.tsx).
+ * CULTURA, in the air. The plane makes the cut: its shadow crosses the gap
+ * in the forest canopy, then it tears across the lens, and behind it the
+ * forest is gone and you are in the evening sky over the farmlands. It
+ * comes round beside you, then flies off toward the low sun, and CULTURA
+ * lights the sky. Dive.tsx drives it with --cultura-word and the plane's
+ * own view (Plane.tsx). The sky is revealed behind it as it crosses
+ * (--wipe-x), as the camera looks up after it (--sky-tilt).
  */
 export default function Cultura({ plane }: { plane: RefObject<PlaneView> }) {
   const ground = useRef<HTMLImageElement>(null);
@@ -45,10 +46,24 @@ export default function Cultura({ plane }: { plane: RefObject<PlaneView> }) {
           </div>
         </div>
         <p className="cultura-word">CULTURA</p>
-        <Plane view={plane} className="cultura-plane" />
       </div>
-      {/* Light on the water, between the forest stream and the river below. */}
-      <div className="cultura-sheen" />
+      <div className="cultura-shadow" />
+      {/* The plane's goodbye: a twinkle where it was, then nothing. */}
+      <svg className="cultura-twinkle" viewBox="-1 -1 2 2" aria-hidden="true">
+        <path d="M0-1C.07-.07.07-.07 1 0C.07.07.07.07 0 1C-.07.07-.07.07-1 0C-.07-.07-.07-.07 0-1Z" />
+        <path
+          className="is-small"
+          d="M0-1C.07-.07.07-.07 1 0C.07.07.07.07 0 1C-.07.07-.07.07-1 0C-.07-.07-.07-.07 0-1Z"
+        />
+      </svg>
+      {/* Over everything: it goes over low, out of the forest. */}
+      <Plane view={plane} className="cultura-plane" />
+      {/* Motion blur for the pass: across only, as a camera panning with it. */}
+      <svg className="cultura-defs" aria-hidden="true">
+        <filter id="cultura-blur" x="-10%" y="0" width="120%" height="100%">
+          <feGaussianBlur stdDeviation="12 1" />
+        </filter>
+      </svg>
     </div>
   );
 }

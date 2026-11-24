@@ -75,12 +75,12 @@ const PHASES = {
   walk: span(17.4, 21.8), // --walk: on along the stream
   unfurl: span(19.4, 20.3), // --unfurl: the fern by SILVA's meaning unfurls
   gold: span(21.1, 22), // --gold: the light warms, toward the farmlands
-  // CULTURA, in the air (Cultura.css): a match cut on the water
-  riverIn: span(21.75, 22.4), // --river-in: into the forest stream, until it is all light
-  riverOut: span(22.4, 23.3), // --river-out: out of it, over the farmland river from high up
-  arrive: span(22.85, 23.55), // the plane sweeps in beside you (Plane.tsx)
-  flyOff: span(23.55, 24.8), // ...then pulls ahead and flies off
-  culturaWord: span(24, 24.7), // --cultura-word: CULTURA in the sky; its orb lights
+  // CULTURA, in the air (Cultura.css): the plane makes the cut
+  flyover: span(21.2, 21.75), // --flyover: its shadow crosses the gap in the canopy
+  wingPass: span(21.85, 22.4), // it tears across the lens; the sky behind it (Plane.tsx)
+  arrive: span(22.6, 23.25), // it comes round beside you
+  flyOff: span(23.25, 24.7), // ...then pulls ahead and flies off
+  culturaWord: span(23.9, 24.6), // --cultura-word: CULTURA in the sky; its orb lights
 };
 
 /*
@@ -179,7 +179,7 @@ export default function Dive({ children }: { children: ReactNode }) {
   const [inForest, setInForest] = useState(false);
   const forestRiver = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
   const [culturaOn, setCulturaOn] = useState(false);
-  const plane = useRef<PlaneView>({ on: false, arrive: 0, away: 0 });
+  const plane = useRef<PlaneView>({ on: false, pass: 0, arrive: 0, away: 0 });
   const rainAmount = useRef(0);
   const river = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
   const flash = useRef<HTMLDivElement>(null); // lightning's light on the land
@@ -280,23 +280,37 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--silva-reading", silvaReading);
       st.classList.toggle("is-forest", p > PHASES.glare[0]);
       // The cut, at the glare's height: the canopy goes, the forest is there.
-      // The cut, under the light on the water.
-      const cultura = p >= PHASES.riverIn[1];
+      // Once the plane has crossed, the forest is behind you.
+      const cultura = p >= PHASES.wingPass[1];
       const forest = p >= PHASES.glareBack[0] && !cultura;
       st.classList.toggle("is-in-forest", forest);
       setInForest(forest);
       forestRiver.current.flow = forest ? 1 : 0;
       if (p >= PHASES.walk[0]) setCulturaOn(true);
-      const riverIn = easeIn(range(p, PHASES.riverIn));
-      const riverOut = easeOut(range(p, PHASES.riverOut));
-      set("--river-in", riverIn);
-      set("--river-out", riverOut);
-      set("--sheen", cultura ? 1 - riverOut : riverIn);
-      plane.current.on = p > PHASES.arrive[0];
+      const flyover = range(p, PHASES.flyover);
+      set("--flyover", flyover);
+      set("--flyover-dip", Math.sin(Math.PI * flyover));
+      const pass = range(p, PHASES.wingPass);
+      plane.current.pass = pass;
+      // Where the reveal has got to, following the plane across: set here
+      // only, so the edge and the shadow over it always move together.
+      st.style.setProperty("--wipe-x", pass <= 0 ? "-50%" : pass >= 1 ? "150%" : `${-30 + pass * 160}%`);
+      set("--overhead", Math.sin(Math.PI * pass));
+      // The camera looks up after it, then back down over the fields.
+      set(
+        "--sky-tilt",
+        pass < 1
+          ? easeInOut(Math.min(1, pass * 2.5))
+          : 1 - easeInOut(range(p, [PHASES.wingPass[1], PHASES.arrive[0] + screens(0.15)])),
+      );
+      plane.current.on = (pass > 0 && pass < 1) || p > PHASES.arrive[0];
       plane.current.arrive = easeOut(range(p, PHASES.arrive));
-      plane.current.away = range(p, PHASES.flyOff);
+      const away = range(p, PHASES.flyOff);
+      plane.current.away = away;
+      // As it becomes a speck: a twinkle, and it's gone.
+      set("--twinkle", range(away, [0.84, 1]));
       set("--cultura-word", easeInOut(range(p, PHASES.culturaWord)));
-      st.classList.toggle("is-cultura", p > PHASES.riverIn[0]);
+      st.classList.toggle("is-cultura", p > PHASES.wingPass[0]);
       st.classList.toggle("is-in-cultura", cultura);
       set("--track", p);
       // Layers fully covered or faded out stop drawing (see Dive.css).
