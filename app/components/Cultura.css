@@ -5,6 +5,10 @@
  *   --sky-tilt      the camera looking up after it, then back down
  *   --twinkle       the plane's goodbye, as it becomes a speck
  *   --cultura-word  CULTURA in the sky as the plane leaves; its orb lights
+ *   --drop          the camera dropping toward the fields
+ *   --haze          the low cloud it drops through; the cut is under it
+ *   --land          down among the vines, settling
+ *   --rows          on along the rows
  * The pointer shifts the layers by depth (--mx, --my: -1 to 1).
  */
 
@@ -170,7 +174,7 @@
   color: rgb(255 246 228 / 0.92);
   text-shadow: 0 0 0.35em rgb(255 180 100 / 0.4);
   translate: calc(-50% + var(--mx, 0) * -0.4vmin) calc((1 - var(--cultura-word, 0)) * 0.2em);
-  opacity: var(--cultura-word, 0);
+  opacity: calc(var(--cultura-word, 0) * (1 - min(1, var(--drop, 0) * 8)));
 }
 
 .cultura-plane {
@@ -229,10 +233,176 @@
 
 .cultura-zoom {
   translate: 0 calc(var(--sky-tilt, 0) * 40svh);
+  /* Dropping toward the fields: they rush up at you. */
+  scale: calc(1 + var(--drop, 0) * 1.8);
+  transform-origin: 50% 75%;
+}
+
+/* ---- Among the vines ---- */
+
+.vineyard {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  /* The vines' own evening, until the layers are decoded. */
+  background: linear-gradient(#cc8c4e, #f2c27a 33%, #6b6a2c 40%, #2f3d16);
+}
+
+.dive-stage.is-vineyard .vineyard {
+  visibility: visible;
+}
+
+.dive-stage.is-vineyard .cultura-scene {
+  visibility: hidden;
+}
+
+/* One 3:2 canvas, covering the screen; the layers share it. */
+.vineyard-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100vw, 150svh);
+  aspect-ratio: 3 / 2;
+  translate: -50% -50%;
+}
+
+.vineyard-canvas img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
+
+/* Coming down, the world rises into place, the nearest most. */
+.vineyard-sky {
+  translate: calc(var(--mx, 0) * -0.3vmin) calc((1 - var(--land, 1)) * 3%);
+  scale: calc(1 + var(--rows, 0) * 0.02);
+}
+
+.vineyard-land {
+  translate: calc(var(--mx, 0) * -0.8vmin) calc((1 - var(--land, 1)) * 8% + var(--my, 0) * -0.4vmin);
+  scale: calc(1 + var(--rows, 0) * 0.12 + (1 - var(--land, 1)) * 0.1);
+  transform-origin: 50% 48%;
+}
+
+/* The rows below the crest: on along them, they come at you. */
+.vineyard-near {
+  translate: calc(var(--mx, 0) * -1.6vmin) calc((1 - var(--land, 1)) * 10% + var(--my, 0) * -0.8vmin);
+  scale: calc(1 + var(--rows, 0) * 0.55 + (1 - var(--land, 1)) * 0.16);
+  transform-origin: 50% 51%;
+}
+
+/* The low sun, off to the left: its glare on the lens, breathing. */
+.vineyard-sun {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at -4% 36%, rgb(255 236 190 / 0.75), rgb(255 196 120 / 0.28) 22%, transparent 55%),
+    linear-gradient(100deg, rgb(255 190 110 / 0.16), transparent 45%);
+  mix-blend-mode: screen;
+  translate: calc(var(--mx, 0) * 1.2vmin) 0;
+}
+
+.dive-stage.is-vineyard .vineyard-sun {
+  animation: vineyard-sun 7s ease-in-out infinite alternate;
+}
+
+@keyframes vineyard-sun {
+  to {
+    opacity: 0.75;
+  }
+}
+
+.vineyard-pollen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The low cloud you drop through: gold where the sun is in it. */
+.cultura-haze {
+  position: absolute;
+  inset: -20%;
+  background:
+    url("/cultura/clouds.webp") 0 30% / 120% 60% no-repeat,
+    url("/cultura/clouds.webp") 60% 75% / 160% 70% no-repeat,
+    radial-gradient(ellipse at 20% 45%, rgb(255 242 214), rgb(246 206 156) 70%);
+  opacity: var(--haze, 0);
+  scale: calc(0.9 + var(--drop, 0) * 0.5);
+}
+
+/* ---------- CULTURA's words ---------- */
+
+/* Set like ORIGO's (Origo.css), with its own shade (see SILVA's). */
+.origo-story.cultura-story::before {
+  opacity: var(--cultura-reading, 0);
+}
+
+.cultura-story .origo-meaning-title {
+  opacity: var(--beat-cultura-meaning, 0);
+}
+
+.cultura-story .cultura-line-shared {
+  --show: var(--beat-cultura-shared, 0);
+}
+
+.cultura-story .cultura-line-makes {
+  --show: var(--beat-cultura-makes, 0);
+}
+
+.cultura-story .cultura-line-person {
+  --show: var(--beat-cultura-person, 0);
+}
+
+.cultura-story .cultura-line-people {
+  --show: var(--beat-cultura-people, 0);
+}
+
+.cultura-story .cultura-line-onward {
+  --show: var(--beat-cultura-onward, 0);
+}
+
+/* Rows to the horizon, drawn in one after another. */
+.cultura-rows {
+  display: block;
+  width: clamp(44px, 3.8vw, 60px);
+  height: auto;
+  margin-bottom: 20px;
+  overflow: visible;
+  fill: none;
+  stroke: rgb(243 236 228 / 0.85);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  opacity: var(--beat-cultura-meaning, 0);
+}
+
+.cultura-rows path {
+  stroke-dashoffset: calc(1 - clamp(0, (var(--beat-cultura-meaning, 0) - var(--i) * 0.1) * 2.5, 1));
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cultura {
     display: none;
+  }
+
+  .cultura-story {
+    order: 4; /* after SILVA's */
+    background:
+      linear-gradient(rgb(30 20 8 / 0.4), rgb(30 20 8 / 0.8)),
+      url("/cultura/vineyard/land-1920.webp") center / cover,
+      #4a3a1c;
+  }
+
+  .cultura-story .origo-meaning-title,
+  .cultura-rows {
+    opacity: 1;
+  }
+
+  .cultura-rows path {
+    stroke-dashoffset: 0;
   }
 }

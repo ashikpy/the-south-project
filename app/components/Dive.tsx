@@ -14,7 +14,7 @@ import Rain from "./Rain";
 import River, { type RiverView } from "./River";
 import Silva, { SilvaSky, SilvaStory } from "./Silva";
 import SilvaForest from "./SilvaForest";
-import Cultura from "./Cultura";
+import Cultura, { CulturaStory } from "./Cultura";
 import type { PlaneView } from "./Plane";
 import "./Dive.css";
 import "./Origo.css";
@@ -24,7 +24,7 @@ import "./Origo.css";
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 25;
+const TRACK = 31;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -81,6 +81,10 @@ const PHASES = {
   arrive: span(22.6, 23.25), // it comes round beside you
   flyOff: span(23.25, 24.7), // ...then pulls ahead and flies off
   culturaWord: span(23.9, 24.6), // --cultura-word: CULTURA in the sky; its orb lights
+  drop: span(24.85, 25.9), // --drop: the camera drops toward the fields
+  haze: span(25.15, 25.95), // --haze: through the low cloud, a golden white-out; the cut under it
+  land: span(25.5, 26.6), // --land: down to the vines, at the height of a drone
+  rows: span(25.6, 30.8), // --rows: on, low along the rows, toward the trees
 };
 
 /*
@@ -94,6 +98,16 @@ const SILVA_BEATS = {
   person: span(19.35, 20.15),
   people: span(20.15, 21), // the longest line gets the most room
   onward: span(20.95, 21.75), // as the light turns gold
+};
+
+/* CULTURA's story, among the vines, as SILVA's, with its own shade. */
+const CULTURA_BEATS = {
+  shared: span(26.1, 26.9),
+  makes: span(26.9, 27.7),
+  meaning: span(27.7, 29.5),
+  person: span(27.7, 28.55),
+  people: span(28.55, 29.5),
+  onward: span(29.45, 30.4), // toward the arid lands
 };
 
 /*
@@ -278,6 +292,13 @@ export default function Dive({ children }: { children: ReactNode }) {
         set(`--beat-silva-${name}`, shown);
       }
       set("--silva-reading", silvaReading);
+      let culturaReading = 0;
+      for (const [name, when] of Object.entries(CULTURA_BEATS)) {
+        const shown = beat(p, when);
+        culturaReading = Math.max(culturaReading, shown);
+        set(`--beat-cultura-${name}`, shown);
+      }
+      set("--cultura-reading", culturaReading);
       st.classList.toggle("is-forest", p > PHASES.glare[0]);
       // The cut, at the glare's height: the canopy goes, the forest is there.
       // Once the plane has crossed, the forest is behind you.
@@ -303,13 +324,20 @@ export default function Dive({ children }: { children: ReactNode }) {
           ? easeInOut(Math.min(1, pass * 2.5))
           : 1 - easeInOut(range(p, [PHASES.wingPass[1], PHASES.arrive[0] + screens(0.15)])),
       );
-      plane.current.on = (pass > 0 && pass < 1) || p > PHASES.arrive[0];
+      plane.current.on = (pass > 0 && pass < 1) || (p > PHASES.arrive[0] && p < PHASES.drop[0]);
       plane.current.arrive = easeOut(range(p, PHASES.arrive));
       const away = range(p, PHASES.flyOff);
       plane.current.away = away;
       // As it becomes a speck: a twinkle, and it's gone.
       set("--twinkle", range(away, [0.84, 1]));
       set("--cultura-word", easeInOut(range(p, PHASES.culturaWord)));
+      // Down out of the sky, through the low cloud, to the vines.
+      const drop = range(p, PHASES.drop);
+      set("--drop", drop * drop);
+      set("--haze", Math.sin(Math.PI * range(p, PHASES.haze)));
+      set("--land", easeOut(range(p, PHASES.land)));
+      set("--rows", easeInOut(range(p, PHASES.rows)));
+      st.classList.toggle("is-vineyard", p >= (PHASES.haze[0] + PHASES.haze[1]) / 2);
       st.classList.toggle("is-cultura", p > PHASES.wingPass[0]);
       st.classList.toggle("is-in-cultura", cultura);
       set("--track", p);
@@ -487,6 +515,7 @@ export default function Dive({ children }: { children: ReactNode }) {
         <Pentara />
         <OrigoStory />
         <SilvaStory />
+        <CulturaStory />
       </div>
     </div>
   );

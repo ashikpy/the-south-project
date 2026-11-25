@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 2600svh; /* 1 screen pinned + 25 screens of scroll (TRACK in Dive.tsx) */
+  height: 3200svh; /* 1 screen pinned + 31 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
