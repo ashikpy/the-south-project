@@ -52,11 +52,12 @@
   }
 }
 
-/* Past the cut, nothing behind needs drawing. */
+/* Past the cut, nothing behind needs drawing, or even styling: out of the
+   page's layout altogether (their canvases pause while they are). */
 .dive-stage.is-forest.is-in-cultura .forest,
 .dive-stage.is-canopy.is-in-cultura .silva,
 .dive-stage.is-in-cultura .mountain {
-  visibility: hidden;
+  display: none;
 }
 
 /* The evening sky, revealed behind the plane as it tears across. */

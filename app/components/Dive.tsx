@@ -211,13 +211,20 @@ export default function Dive({ children }: { children: ReactNode }) {
     }
 
     let frame = 0;
+    // What each property was last set to: unchanged ones are not written,
+    // so the stage's styles are recalculated only when something moved.
+    const written = new Map<string, string>();
     const update = () => {
       frame = 0;
       const rect = el.getBoundingClientRect();
       const travel = rect.height - window.innerHeight;
       const p = travel > 0 ? Math.min(1, Math.max(0, -rect.top / travel)) : 0;
-      const set = (name: string, v: number) =>
-        st.style.setProperty(name, v.toFixed(4));
+      const set = (name: string, v: number) => {
+        const value = v.toFixed(4);
+        if (written.get(name) === value) return;
+        written.set(name, value);
+        st.style.setProperty(name, value);
+      };
 
       const deep = easeInOut(range(p, PHASES.deep));
       const sky = easeInOut(range(p, PHASES.sky));
@@ -388,6 +395,48 @@ export default function Dive({ children }: { children: ReactNode }) {
       cancelAnimationFrame(frame);
     };
   }, []);
+
+  // The globe's maps are the heaviest thing on the page to get ready: start
+  // it once the page has loaded and gone quiet, while you are still on the
+  // hero, rather than when the statement begins.
+  useEffect(() => {
+    let id = 0;
+    const start = () => {
+      id = window.setTimeout(() => {
+        if ("requestIdleCallback" in window) requestIdleCallback(() => setEarthOn(true), { timeout: 3000 });
+        else setEarthOn(true);
+      }, 600);
+    };
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("load", start);
+    };
+  }, []);
+
+  // Each scene's photographs are decoded as soon as it mounts, a screen or
+  // more before it shows, one at a time when the browser is idle. Otherwise
+  // they are decoded on the frame they first appear, and that frame stalls.
+  useEffect(() => {
+    const st = stage.current;
+    if (!st) return;
+    const idle = (fn: () => void) =>
+      "requestIdleCallback" in window ? requestIdleCallback(fn, { timeout: 500 }) : setTimeout(fn, 50);
+    let stopped = false;
+    const queue = [...st.querySelectorAll<HTMLImageElement>("img:not([data-decoded])")];
+    const next = () => {
+      if (stopped) return;
+      const img = queue.shift();
+      if (!img) return;
+      img.dataset.decoded = "";
+      img.decode().catch(() => {}).finally(() => idle(next));
+    };
+    idle(next);
+    return () => {
+      stopped = true;
+    };
+  }, [mountainOn, canopyOn, forestOn, culturaOn]);
 
   return (
     <div className="dive" ref={track}>

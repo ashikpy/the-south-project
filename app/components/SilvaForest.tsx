@@ -169,7 +169,7 @@ export default function SilvaForest({
 }: {
   /** the stream's light; flow is 0 while out of the forest */
   river: RefObject<RiverView>;
-  /** in the forest: the shafts of light run only then */
+  /** in the forest: the shafts of light show, and run, only then */
   lit: boolean;
 }) {
   return (
@@ -186,28 +186,28 @@ export default function SilvaForest({
             <River view={river} mask="/silva/forest/stream-mask.webp" place={STREAM} size={STREAM_SIZE} />
           </div>
           {/* Shafts of light through the gap, as at the hero (LightRays). */}
-          <div className="forest-beams">
-            {lit && (
-              <LightRays
-                raysOrigin="top-center"
-                raysColor="#dcffc8"
-                raysSpeed={0.45}
-                lightSpread={0.85}
-                rayLength={1.7}
-                glow={0.5}
-                haze={0.45}
-                followMouse
-                mouseInfluence={0.08}
-                rayDensity={1.4}
-                raySharpness={0.45}
-                atmosphere={0.6}
-                distortion={0.22}
-                cursorShadow={false}
-                clickPulse={false}
-                intro={false}
-                maxDevicePixelRatio={1}
-              />
-            )}
+          {/* Built with the forest, ahead of time, so nothing compiles at the
+              cut; hidden (and so paused) until you are in it. */}
+          <div className={`forest-beams${lit ? " is-lit" : ""}`}>
+            <LightRays
+              raysOrigin="top-center"
+              raysColor="#dcffc8"
+              raysSpeed={0.45}
+              lightSpread={0.85}
+              rayLength={1.7}
+              glow={0.5}
+              haze={0.45}
+              followMouse
+              mouseInfluence={0.08}
+              rayDensity={1.4}
+              raySharpness={0.45}
+              atmosphere={0.6}
+              distortion={0.22}
+              cursorShadow={false}
+              clickPulse={false}
+              intro={false}
+              maxDevicePixelRatio={1}
+            />
           </div>
           <Motes />
           {/* Something passing over the canopy: its shadow crosses the gap. */}

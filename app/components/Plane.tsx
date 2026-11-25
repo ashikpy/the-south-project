@@ -144,6 +144,7 @@ export default function Plane({ view, className }: { view: RefObject<PlaneView>;
     scene.add(plane);
     const props: THREE.Mesh[] = [];
     const disposables: { dispose(): void }[] = [env, pmrem];
+    let disposed = false;
 
     new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(MODEL, (gltf) => {
       const model = gltf.scene;
@@ -217,6 +218,23 @@ export default function Plane({ view, className }: { view: RefObject<PlaneView>;
           mesh.material = paint;
         }
       });
+      // Warm up now, long before it shows: compile its shaders off the main
+      // thread where the GPU allows, then draw it once, unseen, so textures
+      // and the shadow pass are ready. Otherwise the first frame it appears
+      // in stalls.
+      renderer
+        .compileAsync(scene, camera)
+        .catch(() => {})
+        .then(() => {
+          if (disposed || view.current.on) return;
+          plane.position.copy(START);
+          camera.position.set(0, 0.6, 0);
+          camera.lookAt(0, -1.2, -30);
+          sun.target.position.copy(plane.position);
+          sun.position.copy(plane.position).add(SUN_FROM);
+          renderer.render(scene, camera);
+          renderer.clear();
+        });
     });
 
     const resize = () => {
@@ -300,6 +318,7 @@ export default function Plane({ view, className }: { view: RefObject<PlaneView>;
     raf = requestAnimationFrame(frame);
 
     return () => {
+      disposed = true;
       cancelAnimationFrame(raf);
       ro.disconnect();
       scene.traverse((o) => {

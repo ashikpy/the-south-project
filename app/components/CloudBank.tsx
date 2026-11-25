@@ -172,15 +172,21 @@ export default function CloudBank({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const start = performance.now();
     let raf = 0;
+    let drawn = true;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       const p = progress.current ?? 0;
-      // Nothing to draw before the bank: skip the shader entirely.
-      if (p <= 0) {
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+      // Nothing to draw before the bank: skip the shader entirely, and clear
+      // only once, so the canvas is not redrawn every frame for nothing.
+      if (p <= 0 || document.hidden) {
+        if (drawn) {
+          gl.clearColor(0, 0, 0, 0);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+        drawn = false;
         return;
       }
+      drawn = true;
       gl.uniform1f(uTime, reduced ? 0 : (now - start) / 1000);
       gl.uniform1f(uP, p);
       gl.drawArrays(gl.TRIANGLES, 0, 3);

@@ -65,15 +65,19 @@ export default function DeepParticles({
     let prevCam = 0;
     let speed = 0;
 
+    let drawn = false;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       const s = state.current;
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      if (!s || s.deep <= 0.001) {
-        ctx.clearRect(0, 0, el.width, el.height);
+      if (!s || s.deep <= 0.001 || document.hidden) {
+        // Cleared once: an untouched canvas costs nothing to show.
+        if (drawn) ctx.clearRect(0, 0, el.width, el.height);
+        drawn = false;
         return;
       }
+      drawn = true;
 
       drift += dt * 0.012;
       const cam = s.forward * 2.6 + drift;

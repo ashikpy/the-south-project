@@ -128,6 +128,11 @@
   opacity: calc(var(--level, 0) * 0.85 * (1 - var(--flyover-dip, 0) * 0.75));
 }
 
+/* Not in the forest: not drawn, and LightRays pauses while hidden. */
+.forest-beams:not(.is-lit) {
+  display: none;
+}
+
 /* A plane's shadow, high in the canopy, crossing the light. */
 .forest-flyover {
   position: absolute;

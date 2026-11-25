@@ -298,17 +298,54 @@ export default function Earth({
     // arriving, a resize), not 60 times a second while the page is still.
     let dirty = true;
 
-    const loader = new THREE.TextureLoader();
     const anisotropy = renderer.capabilities.getMaxAnisotropy();
-    const load = (name: string, srgb: boolean) => {
-      const t = loader.load(TEX + name, () => {
-        dirty = true;
-        renderer.render(scene, camera);
-      });
+    // The maps are large (up to 4096px). Decoded off the main thread
+    // (ImageBitmapLoader, flipped there as WebGL expects), then sent to the
+    // GPU when the browser is idle: either, done on the frame a map arrives,
+    // stalls the descent.
+    let disposed = false;
+    const bitmaps = new THREE.ImageBitmapLoader().setOptions({ imageOrientation: "flipY" });
+    // One upload per idle moment, in turn, so they never pile into a frame.
+    // Without a timeout: if the page is never idle, three uploads the map
+    // itself when it is first drawn, as it would anyway.
+    const uploads: (() => void)[] = [];
+    let uploading = false;
+    const pump = () => {
+      const next = uploads.shift();
+      if (!next || disposed) return void (uploading = false);
+      uploading = true;
+      const go = () => {
+        next();
+        pump();
+      };
+      if ("requestIdleCallback" in window) requestIdleCallback(go);
+      else setTimeout(go, 50);
+    };
+    const idle = (fn: () => void) => {
+      uploads.push(fn);
+      if (!uploading) pump();
+    };
+    const fetchMap = (url: string, srgb: boolean, ready: (t: THREE.Texture) => void) => {
+      const t = new THREE.Texture();
+      t.flipY = false; // already flipped in decoding
       t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
       t.anisotropy = anisotropy;
+      bitmaps.load(url, (bitmap) => {
+        if (disposed) return bitmap.close();
+        t.image = bitmap;
+        t.needsUpdate = true;
+        idle(() => {
+          if (disposed) return;
+          renderer.initTexture(t);
+          ready(t);
+        });
+      });
       return t;
     };
+    const load = (name: string, srgb: boolean) =>
+      fetchMap(TEX + name, srgb, () => {
+        dirty = true;
+      });
     const day = load("earth_day_4096.jpg", true);
     const night = load("earth_night_4096.jpg", true);
     const maps = load("earth_bump_roughness_clouds_4096.jpg", false);
@@ -325,15 +362,12 @@ export default function Earth({
       LEVELS.forEach((l, i) => {
         if (requested[i] || zoom < l.loadAt) return;
         requested[i] = true;
-        const t = loader.load(TEX + l.file, () => {
+        const t = fetchMap(TEX + l.file, true, () => {
           levelUniforms[i].value = t;
           arrived[i] = performance.now();
           dirty = true;
           if (reduced) uLevelOn.value[i] = 1;
-          renderer.render(scene, camera);
         });
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.anisotropy = anisotropy;
         levelTex.push(t);
       });
     };
@@ -529,8 +563,21 @@ export default function Earth({
         holder.add(model);
         holder.scale.setScalar(STATION.length / Math.max(size.x, size.y, size.z));
         station.add(holder);
-        stationReady = true;
-        dirty = true;
+        // Ready before it flies by: shaders compiled and textures on the
+        // GPU now, so its first frame doesn't stall.
+        stationGL
+          .compileAsync(stationScene, camera)
+          .catch(() => {})
+          .then(() => {
+            if (disposed) return;
+            model.traverse((o) => {
+              const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+              for (const map of [m?.map, m?.normalMap, m?.roughnessMap, m?.metalnessMap, m?.emissiveMap])
+                if (map) stationGL.initTexture(map);
+            });
+            stationReady = true;
+            dirty = true;
+          });
       });
     }
     const right = new THREE.Vector3();
@@ -679,11 +726,13 @@ export default function Earth({
       renderer.render(scene, camera);
     };
     surface.rotation.y = clouds.rotation.y = -1.2; // open on Africa and the Atlantic
-    // Free-spinning, any level may be seen: load them all.
-    requestLevels(view ? 0 : 1);
+    // All of them now, while the planet is still far: they are decoded and
+    // on the GPU long before the descent reaches them.
+    requestLevels(1);
     if (!reduced) raf = requestAnimationFrame(frame);
 
     return () => {
+      disposed = true;
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
