@@ -15,6 +15,8 @@ import River, { type RiverView } from "./River";
 import Silva, { SilvaSky, SilvaStory } from "./Silva";
 import SilvaForest from "./SilvaForest";
 import Cultura, { CulturaStory } from "./Cultura";
+import Dust, { type DustView } from "./Dust";
+import Tenax, { TenaxStory } from "./Tenax";
 import type { PlaneView } from "./Plane";
 import "./Dive.css";
 import "./Origo.css";
@@ -24,7 +26,7 @@ import "./Origo.css";
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 31;
+const TRACK = 38;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -85,6 +87,11 @@ const PHASES = {
   haze: span(25.15, 25.95), // --haze: through the low cloud, a golden white-out; the cut under it
   land: span(25.5, 26.6), // --land: down to the vines, at the height of a drone
   rows: span(25.6, 30.8), // --rows: on, low along the rows, toward the trees
+  dustIn: span(29.9, 31.15), // a wall of dust rises off the horizon and comes over the vines
+  dustOut: span(31.3, 32.5), // ...the cut under it; it thins, and sinks to the sand
+  tilt: span(31.5, 33.7), // --tilt: TENAX's evening sky, then down to the dunes
+  tenaxWord: span(32.2, 32.9), // --tenax-word: TENAX in the sky; its orb lights
+  sand: span(33.6, 37.9), // --sand: a slow push toward the big dune
 };
 
 /*
@@ -108,6 +115,16 @@ const CULTURA_BEATS = {
   person: span(27.7, 28.55),
   people: span(28.55, 29.5),
   onward: span(29.45, 30.4), // toward the arid lands
+};
+
+/* TENAX's story, on the sand, as CULTURA's, with its own shade. */
+const TENAX_BEATS = {
+  out: span(33.9, 34.7),
+  lasts: span(34.7, 35.5),
+  meaning: span(35.5, 37.2),
+  person: span(35.5, 36.35),
+  people: span(36.35, 37.2),
+  onward: span(37.15, 37.95),
 };
 
 /*
@@ -193,6 +210,8 @@ export default function Dive({ children }: { children: ReactNode }) {
   const [inForest, setInForest] = useState(false);
   const forestRiver = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
   const [culturaOn, setCulturaOn] = useState(false);
+  const [tenaxOn, setTenaxOn] = useState(false);
+  const dust = useRef<DustView>({ rise: 0, clear: 0, sun: [0.06, 0.62] });
   const plane = useRef<PlaneView>({ on: false, pass: 0, arrive: 0, away: 0 });
   const rainAmount = useRef(0);
   const river = useRef<RiverView>({ flow: 0, dawn: 0, rain: 0 });
@@ -306,6 +325,13 @@ export default function Dive({ children }: { children: ReactNode }) {
         set(`--beat-cultura-${name}`, shown);
       }
       set("--cultura-reading", culturaReading);
+      let tenaxReading = 0;
+      for (const [name, when] of Object.entries(TENAX_BEATS)) {
+        const shown = beat(p, when);
+        tenaxReading = Math.max(tenaxReading, shown);
+        set(`--beat-tenax-${name}`, shown);
+      }
+      set("--tenax-reading", tenaxReading);
       st.classList.toggle("is-forest", p > PHASES.glare[0]);
       // The cut, at the glare's height: the canopy goes, the forest is there.
       // Once the plane has crossed, the forest is behind you.
@@ -345,6 +371,20 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--land", easeOut(range(p, PHASES.land)));
       set("--rows", easeInOut(range(p, PHASES.rows)));
       st.classList.toggle("is-vineyard", p >= (PHASES.haze[0] + PHASES.haze[1]) / 2);
+      // The dust storm: a wall rising over the vines and on overhead, the
+      // cut to the desert under it, then moving on, leaving dust on the sand. The sun behind
+      // it moves from the vineyard's, on the left, to the desert's.
+      if (p >= PHASES.rows[0]) setTenaxOn(true);
+      const dustIn = range(p, PHASES.dustIn);
+      const dustOut = range(p, PHASES.dustOut);
+      dust.current.rise = Math.pow(dustIn, 1.3);
+      dust.current.clear = easeInOut(dustOut);
+      dust.current.sun[0] = 0.06 + 0.72 * dustOut;
+      dust.current.sun[1] = 0.62 - 0.27 * dustOut;
+      st.classList.toggle("is-tenax", p >= (PHASES.dustIn[1] + PHASES.dustOut[0]) / 2);
+      set("--tilt", easeInOut(range(p, PHASES.tilt)));
+      set("--tenax-word", easeInOut(range(p, PHASES.tenaxWord)));
+      set("--sand", easeInOut(range(p, PHASES.sand)));
       st.classList.toggle("is-cultura", p > PHASES.wingPass[0]);
       st.classList.toggle("is-in-cultura", cultura);
       set("--track", p);
@@ -436,7 +476,7 @@ export default function Dive({ children }: { children: ReactNode }) {
     return () => {
       stopped = true;
     };
-  }, [mountainOn, canopyOn, forestOn, culturaOn]);
+  }, [mountainOn, canopyOn, forestOn, culturaOn, tenaxOn]);
 
   return (
     <div className="dive" ref={track}>
@@ -462,16 +502,8 @@ export default function Dive({ children }: { children: ReactNode }) {
             <div className="mountain">
               {canopyOn && <SilvaSky />}
               <div className="mountain-scene">
-                {/* The sky, back to front, all behind the peak: storm,
-                    lightning, then the sunrise. */}
-                <div className="origo-overcast" />
-                <div className="origo-storm" />
-                <Lightning className="origo-lightning" amount={rainAmount} flash={flash} />
-                <div className="origo-dawn" />
-                <div className="origo-sun" />
-                <p className="mountain-word">ORIGO</p>
-                {/* The far layer: the peak, the haze at its foot and the
-                    valley mist drifting in front of it, moving together. */}
+                {/* The far layer: the photograph, river, weather and haze,
+                    moving together. */}
                 <div className="mountain-far">
                   {/* Plain img: pre-optimised WebP layers sharing one canvas,
                       placed by CSS; next/image adds nothing. */}
@@ -484,15 +516,38 @@ export default function Dive({ children }: { children: ReactNode }) {
                     alt=""
                     decoding="async"
                   />
+                  {/* The storm's light on everything: the photograph's own
+                      cloud too turns grey, and the range goes dark. */}
+                  <div className="origo-gloom" />
+                  {/* Alpenglow: at sunrise the range turns rose and gold. */}
+                  <div className="origo-alpenglow" />
+                  {/* The river: the real one on the valley floor, swollen by
+                      the rain, and the current moving on it (River.tsx). */}
+                  <div className="origo-stream">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/mountain/stream.webp" alt="" decoding="async" />
+                    <River className="origo-river" view={river} />
+                  </div>
+                  {/* The sky's weather, fading out above the peaks so the
+                      photograph's own low cloud lies between: storm,
+                      lightning, and the sunrise. */}
+                  <div className="origo-sky">
+                    <div className="origo-overcast" />
+                    <div className="origo-storm" />
+                    <Lightning className="origo-lightning" amount={rainAmount} flash={flash} />
+                    <div className="origo-dawn" />
+                    <div className="origo-sun" />
+                  </div>
+                  <p className="mountain-word">ORIGO</p>
                   <div className="mountain-haze" />
                   <div className="mountain-mist" />
                 </div>
                 <div className="origo-sunlight" />
                 {/* In the rain between you and the mountain, so it crosses
-                    the slopes and lands behind the front hills. */}
+                    the slopes and lands behind the trees. */}
                 <div className="origo-rainbow" />
                 <div className="origo-valley-mist" />
-                {/* The near layer: the hills, and the stream lying on them. */}
+                {/* The near layer: the forested ridge and the trees. */}
                 <div className="mountain-near">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -503,13 +558,6 @@ export default function Dive({ children }: { children: ReactNode }) {
                     alt=""
                     decoding="async"
                   />
-                  {/* The stream: water cut round the trees and bushes of
-                      the front image, and the current moving on it (River.tsx). */}
-                  <div className="origo-stream">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/mountain/stream.webp" alt="" decoding="async" />
-                    <River className="origo-river" view={river} />
-                  </div>
                 </div>
               </div>
               <div className="mountain-light" />
@@ -526,6 +574,8 @@ export default function Dive({ children }: { children: ReactNode }) {
           {canopyOn && <Silva />}
           {forestOn && <SilvaForest river={forestRiver} lit={inForest} />}
           {culturaOn && <Cultura plane={plane} />}
+          {tenaxOn && <Tenax />}
+          {tenaxOn && <Dust className="descent-dust" view={dust} />}
 
           {/* The five expressions: those met so far shine, the rest wait,
               faded, until you reach them. */}
@@ -534,7 +584,7 @@ export default function Dive({ children }: { children: ReactNode }) {
               {PENTARA.map((x, i) => (
                 <li
                   key={x.name}
-                  className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}${x.name === "SILVA" ? " is-silva" : ""}${x.name === "CULTURA" ? " is-cultura" : ""}`}
+                  className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}${x.name === "SILVA" ? " is-silva" : ""}${x.name === "CULTURA" ? " is-cultura" : ""}${x.name === "TENAX" ? " is-tenax" : ""}`}
                   title={x.name}
                 >
                   {(skyOn || cloudOn || mountainOn) && (
@@ -565,6 +615,7 @@ export default function Dive({ children }: { children: ReactNode }) {
         <OrigoStory />
         <SilvaStory />
         <CulturaStory />
+        <TenaxStory />
       </div>
     </div>
   );

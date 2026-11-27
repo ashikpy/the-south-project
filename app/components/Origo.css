@@ -13,6 +13,17 @@
 
 /* ---------- Weather ---------- */
 
+/* The sky over the photograph's own: it fades out above the peaks
+   (sky-mask.webp), so the photograph's low cloud lies between them and it.
+   Its children are placed in the scene's terms. */
+.origo-sky {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: url("/mountain/sky-mask.webp") 0 0 / 100% 100% no-repeat;
+  mask: url("/mountain/sky-mask.webp") 0 0 / 100% 100% no-repeat;
+  container-type: inline-size;
+}
+
 /* Cloud fills the sky behind the peak; its edge stays soft and uneven. */
 .origo-overcast {
   position: absolute;
@@ -90,15 +101,15 @@
 }
 
 /*
- * The sun starts hidden behind the left shoulder (its ridge is at 38% here)
+ * The sun starts hidden in the gap in the range (its floor is at 42% here)
  * and climbs 13.5cqw, 24% of the scene's height. Its disc is behind the
- * mountain; .origo-sunlight is the light that spills over the ridge.
+ * mountains; .origo-sunlight is the light that spills over the ridge.
  */
 .origo-sun,
 .origo-sunlight {
   position: absolute;
-  left: 39.5%;
-  top: 46%;
+  left: 60%;
+  top: 49%;
   width: 56cqw;
   aspect-ratio: 1;
   translate: -50% calc(-50% - var(--sunrise, 0) * 13.5cqw);
@@ -133,6 +144,26 @@
   }
 }
 
+/* Storm light over the photograph: everything greys and darkens, its own
+   cloud included, the land most. */
+.origo-gloom {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgb(88 100 116), rgb(118 128 140) 40%, rgb(74 86 96));
+  mix-blend-mode: multiply;
+  opacity: calc(var(--rain, 0) * 0.85);
+}
+
+/* Alpenglow: the low sun turns the snow rose and the shadows violet, over
+   the photograph (its sky is under the dawn's own). */
+.origo-alpenglow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgb(255 168 140), rgb(255 190 150) 38%, rgb(150 110 140) 55%, rgb(120 90 110));
+  mix-blend-mode: multiply;
+  opacity: calc(var(--dawn, 0) * 0.6);
+}
+
 /* Low sun on the land: golden, deeper at the edges. */
 .origo-warmth {
   position: absolute;
@@ -150,16 +181,16 @@
 
 /* ---------- The river ---------- */
 
-/* Image and canvas are one crop of the front layer's 3840×2162 canvas
-   (x 1740–3240, y 1680–2162), so they are placed by those numbers. */
+/* Image and canvas are one crop of the back layer's 3840×2162 canvas
+   (x 451–2365, y 1119–1594), so they are placed by those numbers. */
 .origo-stream {
   position: absolute;
-  left: 45.3125%;
-  top: 77.7058%;
-  width: 39.0625%;
-  height: 22.2942%;
-  /* It runs downhill: revealed from the gap to the foot of the frame. */
-  clip-path: inset(0 0 calc((1 - var(--stream, 0)) * 92%) 0);
+  left: 11.7448%;
+  top: 51.7576%;
+  width: 49.8438%;
+  height: 21.9704%;
+  /* It runs down the valley, from far off on the right toward you. */
+  clip-path: inset(0 0 0 calc((1 - var(--stream, 0)) * 100%));
   opacity: calc(var(--stream, 0) * 6);
 }
 

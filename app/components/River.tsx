@@ -34,15 +34,16 @@ export interface RiverPlace {
 }
 
 /*
- * ORIGO's, in the front layer's 3840x2162 canvas: the crop is x 1740-3240,
- * y 1680-2162, and ripples lie on a ground plane with its horizon at y 1640,
- * so they are tiny far off, long and low up close, and come toward you.
+ * ORIGO's, in the back layer's 3840x2162 canvas: the braided river on the
+ * valley floor, x 451-2365, y 1119-1594. Ripples lie on a ground plane with
+ * its horizon at y 1080, so they are tiny far off, up the valley, long and
+ * low nearer, and come toward you.
  */
 const ORIGO: RiverPlace = {
-  crop: [1740, 1680, 1500, 482],
-  horizon: 1640,
-  centre: 2400,
-  far: [1760, 2160],
+  crop: [451, 1119, 1914, 475],
+  horizon: 1080,
+  centre: 2200,
+  far: [1120, 1480],
 };
 
 const FRAG = `
@@ -120,7 +121,7 @@ export default function River({
   className,
   mask: maskSrc = "/mountain/stream-mask.webp",
   place = ORIGO,
-  size = [1200, 386],
+  size = [957, 237],
 }: {
   view: RefObject<RiverView>;
   className?: string;

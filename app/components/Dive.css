@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 3200svh; /* 1 screen pinned + 31 screens of scroll (TRACK in Dive.tsx) */
+  height: 3900svh; /* 1 screen pinned + 38 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
@@ -295,12 +295,13 @@
 }
 
 /*
- * ORIGO's mountain: two full-frame layers on one canvas (1671:941), so they
- * register without any stretching. The scene box keeps that ratio and covers
- * the screen, so the composition holds at any size.
- *   back   solid below its ridge to every edge; set 6% lower, which puts the
- *          peak at 25%: any higher and it hides the R's leg (reads "OPIGO")
- *   front  as generated; transparent only above the hills
+ * ORIGO's mountain: a photograph of a glacial valley (Kalen Emsley, Unsplash),
+ * in two full-frame layers on one canvas (1671:941), so they register without
+ * any stretching. The scene box keeps that ratio and covers the screen, so
+ * the composition holds at any size.
+ *   back   the whole photograph, its own sky and clouds; the weather and the
+ *          word lie over its sky only (sky-mask.webp, its traced skyline)
+ *   front  the forested ridge and the trees, cut out by colour
  * Coming out of the cloud the front starts bigger and lower than the back
  * and both settle (--settle), then push slowly in toward the peak (--push).
  * In the story (Origo.css) the near layer grows from the foot of the frame,
@@ -364,11 +365,16 @@
 
 .mountain-back {
   left: 0;
-  top: 6%;
+  top: 0;
   width: 100%;
   height: 100%;
   /* Its paler, distant colour (saturate 0.86, brightness 1.03) is baked
      into the exports: a live filter would redraw 4K on every scroll frame. */
+  /* The photograph has its own sky, which ends at its top edge. As the
+     camera pitches up into SILVA (--look) that edge would show: its sky
+     melts into SILVA's instead. Nothing changes until the pitch begins. */
+  -webkit-mask-image: linear-gradient(rgb(0 0 0 / max(0, 1 - var(--look, 0) * 8)), #000 calc(min(1, var(--look, 0) * 5) * 40%));
+  mask-image: linear-gradient(rgb(0 0 0 / max(0, 1 - var(--look, 0) * 8)), #000 calc(min(1, var(--look, 0) * 5) * 40%));
 }
 
 /* Haze pooling at the peak's foot. */
