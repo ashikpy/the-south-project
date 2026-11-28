@@ -18,6 +18,7 @@ import Cultura, { CulturaStory } from "./Cultura";
 import Dust, { type DustView } from "./Dust";
 import Tenax, { TenaxStory } from "./Tenax";
 import Keyhole from "./Keyhole";
+import Outro from "./Outro";
 import type { PlaneView } from "./Plane";
 import "./Dive.css";
 import "./Origo.css";
@@ -27,7 +28,7 @@ import "./Origo.css";
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 49;
+const TRACK = 53;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -102,6 +103,9 @@ const PHASES = {
   keyhole: span(41.8, 43.45), // you fly at it
   flash: span(43.15, 43.8), // --flash: through it, in a flash of the light beyond
   pullBack: span(43.5, 44.45), // --pullback: the camera pulls back; the ocean is a photograph on the page
+  outroIn: span(49.85, 50.45), // --outro-in: the page's name cut out of it, the sea in its letters
+  outroZoom: span(50.45, 51.75), // --outro-zoom: the camera dives through a letter into the sea
+  outroWords: span(51.6, 52.4), // --outro-words: the last words, over the sea
 };
 
 /*
@@ -146,7 +150,7 @@ const ABOUT_BEATS = [
   span(45.2, 46.5),
   span(46.3, 47.6),
   span(47.4, 48.7),
-  span(48.5, 50),
+  span(48.5, 49.9),
 ];
 
 /*
@@ -427,7 +431,15 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--flash", Math.sin(Math.PI * range(p, PHASES.flash)));
       const pullBack = easeInOut(range(p, PHASES.pullBack));
       set("--pullback", pullBack);
-      document.documentElement.classList.toggle("is-light", pullBack > 0.5);
+      // Out through the page's name to the sea, and the last words (Outro.tsx).
+      const outroIn = range(p, PHASES.outroIn);
+      const outroZoom = range(p, PHASES.outroZoom);
+      set("--outro-in", outroIn);
+      set("--outro-zoom", outroZoom);
+      set("--outro-words", easeInOut(range(p, PHASES.outroWords)));
+      st.classList.toggle("is-outro", outroIn > 0);
+      st.classList.toggle("is-through", outroZoom >= 1);
+      document.documentElement.classList.toggle("is-light", pullBack > 0.5 && outroZoom < 0.6);
       ABOUT_BEATS.forEach((when, i) => set(`--about-${i}`, beat(p, when)));
       st.classList.toggle("is-cultura", p > PHASES.wingPass[0]);
       st.classList.toggle("is-in-cultura", cultura);
@@ -578,6 +590,9 @@ export default function Dive({ children }: { children: ReactNode }) {
                 {/* The far layer: the photograph, river, weather and haze,
                     moving together. */}
                 <div className="mountain-far">
+                  {/* Its sky carried on past its top edge, mirrored, for
+                      when the camera rolls and pitches up toward SILVA. */}
+                  <div className="mountain-back-sky" />
                   {/* Plain img: pre-optimised WebP layers sharing one canvas,
                       placed by CSS; next/image adds nothing. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -651,6 +666,8 @@ export default function Dive({ children }: { children: ReactNode }) {
           {tenaxOn && <Dust className="descent-dust" view={dust} />}
           {/* Out of Pentara, through a keyhole, into the real world. */}
           {tenaxOn && <Keyhole />}
+          {/* Out through its name, to the open sea. */}
+          {tenaxOn && <Outro />}
 
           {/* The five expressions: those met so far shine, the rest wait,
               faded, until you reach them. */}

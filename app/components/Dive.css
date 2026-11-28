@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 5000svh; /* 1 screen pinned + 49 screens of scroll (TRACK in Dive.tsx) */
+  height: 5400svh; /* 1 screen pinned + 53 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
@@ -377,6 +377,22 @@
   mask-image: linear-gradient(rgb(0 0 0 / max(0, 1 - var(--look, 0) * 8)), #000 calc(min(1, var(--look, 0) * 5) * 40%));
 }
 
+/* The photograph's sky, carried on above its top edge: its own top half,
+   mirrored, so the seam is invisible; fading upward, and out as SILVA's
+   sky comes in. Rolling and pitching up, the camera sees this, not an edge. */
+.mountain-back-sky {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  width: 100%;
+  height: 50%;
+  background: url("/mountain/back-2560.webp") top / 100% 200% no-repeat;
+  scale: 1 -1;
+  -webkit-mask-image: linear-gradient(to top, transparent, #000 70%);
+  mask-image: linear-gradient(to top, transparent, #000 70%);
+  opacity: calc(1 - min(1, var(--look, 0) * 8));
+}
+
 /* Haze pooling at the peak's foot. */
 .mountain-haze {
   position: absolute;
@@ -666,4 +682,10 @@
 .dive-stage.is-about .tenax,
 .dive-stage.is-about .descent-dust {
   display: none;
+}
+
+/* Through the page's name and out to the sea: the page beneath need not
+   be drawn. */
+.dive-stage.is-through .keyhole-view {
+  visibility: hidden;
 }

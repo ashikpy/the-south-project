@@ -1,0 +1,145 @@
+/* The page's footer (Footer.tsx): solid dark ground after the open sea. */
+
+.footer {
+  --rule: rgb(255 255 255 / 0.12);
+  --muted: rgb(255 255 255 / 0.5);
+
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  gap: clamp(40px, 8svh, 96px);
+  min-height: 86svh;
+  padding: clamp(64px, 12svh, 140px) max(16px, 2.5vw) clamp(16px, 2.6svh, 26px);
+  background: #0a0d0e;
+  color: #fff;
+  font-family: var(--font-red-hat-display), sans-serif;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 3vw, 56px);
+  align-items: start;
+}
+
+.footer-lede {
+  margin: 0;
+  max-width: 16ch;
+  font-size: clamp(28px, 3vw, 52px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.footer-head {
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.footer-col ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: clamp(15px, 1.1vw, 18px);
+}
+
+.footer a {
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.footer a:hover {
+  opacity: 0.55;
+}
+
+/* Each landscape by its orb: a dot in its colour, the name in white. */
+.footer-lands li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+
+.footer-lands li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.footer-lands span {
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* The name, edge to edge. */
+.footer-mark {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: #f3eee5;
+}
+
+.footer-base {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.footer-base p {
+  margin: 0;
+}
+
+.footer-legal {
+  display: flex;
+  gap: 22px;
+}
+
+.footer-back {
+  justify-self: end;
+}
+
+/* Tablets and phones: the line above, the columns beneath it. */
+@media (max-width: 900px) {
+  .footer-top {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .footer-lede {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .footer-base {
+    grid-template-columns: 1fr auto;
+  }
+
+  .footer-legal {
+    display: none;
+  }
+}

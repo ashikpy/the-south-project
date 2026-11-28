@@ -62,8 +62,11 @@
 .mountain-scene {
   /* The eye looks at the middle of the screen, wherever the cover sits. */
   transform-origin: 50% calc(80% - 30svh);
+  /* Rolled, the photograph's top corner would dip into view (its top edge
+     sits just above the screen): it is drawn a little larger as it rolls. */
   transform: perspective(var(--eye)) translateZ(var(--eye)) rotateZ(var(--roll))
-    rotateX(calc(var(--look, 0) * var(--pitch))) translateZ(calc(var(--eye) * -1));
+    rotateX(calc(var(--look, 0) * var(--pitch))) translateZ(calc(var(--eye) * -1))
+    scale(calc(1 + var(--bank, 0) * 0.14));
 }
 
 @media (max-width: 600px) {
