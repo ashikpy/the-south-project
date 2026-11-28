@@ -150,7 +150,7 @@ const ABOUT_BEATS = [
   span(45.2, 46.5),
   span(46.3, 47.6),
   span(47.4, 48.7),
-  span(48.5, 49.9),
+  span(48.5, 51), // held until the outro has covered it
 ];
 
 /*

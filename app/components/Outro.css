@@ -17,6 +17,12 @@
   visibility: visible;
 }
 
+/* It dissolves in over the About page, whose paper it shares: the photo
+   and words melt away as the name, already filling with water, comes up. */
+.outro {
+  opacity: min(1, calc(var(--outro-in, 0) * 4));
+}
+
 /* Under the page it is cut from, the open sea; settling as you dive
    toward it. */
 .outro-sea {

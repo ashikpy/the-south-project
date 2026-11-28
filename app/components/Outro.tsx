@@ -43,6 +43,8 @@ function Cut() {
     const texts = [...el.querySelectorAll<SVGTextElement>(".outro-type text")];
     const chars = [...el.querySelectorAll<SVGTSpanElement>(".outro-type tspan")];
     const paper = el.querySelector<SVGRectElement>(".outro-paper")!;
+    const mask = el.querySelector<SVGMaskElement>("mask")!;
+    const maskRect = el.querySelector<SVGRectElement>("mask > rect")!;
     // The stem alone, as a rectangle: text this large is not drawn at all
     // (glyphs have a size limit), so close in, the stem takes over from it.
     const stem = el.querySelector<SVGRectElement>(".outro-stem")!;
@@ -59,6 +61,14 @@ function Cut() {
       h = el.clientHeight;
       if (!w || !h) return;
       el.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      // The mask and the page exactly the screen: some browsers (Safari)
+      // give up on a mask region much larger, and draw the page unmasked.
+      for (const r of [mask, maskRect, paper]) {
+        r.setAttribute("x", "0");
+        r.setAttribute("y", "0");
+        r.setAttribute("width", String(w));
+        r.setAttribute("height", String(h));
+      }
       // As the hero sets it: as wide as the screen allows, two lines.
       const portrait = w / h < 0.8;
       texts.forEach((t) => t.setAttribute("font-size", "100"));
@@ -145,7 +155,7 @@ function Cut() {
       // sea, the page their frame.
       // (In steps, and only those that changed: each change redraws the mask.)
       chars.forEach((c, i) => {
-        const t = clamp01(open * 1.6 - (i / chars.length) * 0.6);
+        const t = clamp01((open - (i / chars.length) * 0.35) / 0.4);
         const v = Math.round((255 * (1 - ease(t))) / 8) * 8;
         if (shades[i] === v) return;
         shades[i] = v;
@@ -179,8 +189,8 @@ function Cut() {
   return (
     <svg ref={svg} className="outro-cut" aria-hidden="true">
       <defs>
-        <mask id="outro-mask" maskUnits="userSpaceOnUse" x="-100000" y="-100000" width="200000" height="200000">
-          <rect x="-100000" y="-100000" width="200000" height="200000" fill="#fff" />
+        <mask id="outro-mask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+          <rect fill="#fff" />
           <g className="outro-type">
             <rect className="outro-stem" fill="#000" visibility="hidden" />
             {LINES.map((line) => (
@@ -195,7 +205,7 @@ function Cut() {
           </g>
         </mask>
       </defs>
-      <rect className="outro-paper" x="-100000" y="-100000" width="200000" height="200000" mask="url(#outro-mask)" />
+      <rect className="outro-paper" mask="url(#outro-mask)" />
     </svg>
   );
 }
