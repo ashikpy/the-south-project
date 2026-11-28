@@ -1,0 +1,116 @@
+/*
+ * Out of Pentara, through a keyhole (Keyhole.tsx). Dive.tsx sets:
+ *   --kh-dim … --kh-reveal  the dark, the orbs, the black hole, the keyhole (0–1)
+ *   --keyhole       how far you have flown into it (0–1)
+ *   --flash         passing through it: a flash of the light beyond (0–1–0)
+ *   --pullback      the camera pulling back from the ocean to the page (0–1)
+ *   --frame-*       where the page's photograph sits, measured, in px
+ * The portal draws all of it until you are through; it is centred on the
+ * screen.
+ */
+
+.keyhole {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.dive-stage.is-void .keyhole {
+  visibility: visible;
+}
+
+/* On the sand already there, unseen, so that showing it costs nothing. */
+.dive-stage.is-tenax .keyhole {
+  visibility: visible;
+}
+
+/* The portal fades in over the page's desert, drawing the same; then that
+   stops drawing (is-portal). */
+.dive-stage.is-portal .tenax,
+.dive-stage.is-portal .descent-dust {
+  visibility: hidden;
+}
+
+.keyhole-portal {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: min(1, calc(var(--kh-dim, 0) * 9));
+}
+
+.dive-stage.is-about .keyhole-portal {
+  display: none;
+}
+
+/* As it goes dark, nothing on the sand moves: what is under the portal need
+   not be drawn, and the orb bar drops its frosted glass as it fades. */
+.dive-stage.is-void .collect-slots {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ---------- Through it ---------- */
+
+/* The other side, as a page: hidden until you are through (the portal
+   draws the keyhole and the ocean in it until then). */
+.keyhole-view {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+
+.dive-stage.is-about .keyhole-view {
+  visibility: visible;
+}
+
+/* The ocean beyond: full screen through the keyhole, coming toward you;
+   then, as the camera pulls back, cut down to the page's photograph frame
+   and centred in it. */
+.keyhole-world {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  clip-path: inset(
+    calc(var(--pullback, 0) * var(--frame-t, 0px)) calc(var(--pullback, 0) * var(--frame-r, 0px))
+      calc(var(--pullback, 0) * var(--frame-b, 0px)) calc(var(--pullback, 0) * var(--frame-l, 0px)) round
+      calc(var(--pullback, 0) * var(--frame-radius, 20px))
+  );
+}
+
+.keyhole-world img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  translate: calc(var(--pullback, 0) * var(--frame-cx, 0px)) 0;
+  scale: calc(1.45 - 0.45 * var(--keyhole, 0));
+}
+
+/* Seen through a small keyhole it is all light: the sun through the water,
+   blinding at first, the ocean coming clear as you near it. */
+.keyhole-world::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 44%, rgb(248 254 255) 6%, rgb(206 240 252 / 0.92) 22%, rgb(140 205 235 / 0.55) 45%, rgb(80 150 190 / 0.15) 70%, transparent 90%);
+  /* Full until it is near, then gone as you go through. */
+  opacity: calc(1 - clamp(0, (var(--keyhole, 0) - 0.72) * 3.6, 1));
+}
+
+/* Passing through: the light beyond fills everything for a moment. */
+.keyhole-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgb(244 253 255), rgb(196 232 248) 70%);
+  opacity: var(--flash, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keyhole {
+    display: none;
+  }
+}

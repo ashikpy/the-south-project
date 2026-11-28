@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { CloudShader } from "@/components/ui/cloud-shader";
 import FluidOrb from "@/components/ui/fluid-orb";
 import DeepParticles, { type DiveState } from "./DeepParticles";
@@ -17,6 +17,7 @@ import SilvaForest from "./SilvaForest";
 import Cultura, { CulturaStory } from "./Cultura";
 import Dust, { type DustView } from "./Dust";
 import Tenax, { TenaxStory } from "./Tenax";
+import Keyhole from "./Keyhole";
 import type { PlaneView } from "./Plane";
 import "./Dive.css";
 import "./Origo.css";
@@ -26,7 +27,7 @@ import "./Origo.css";
  * TRACK screens long; Dive.css sets its height to match). span() turns them
  * into fractions of the track. Each becomes a CSS variable on the stage.
  */
-const TRACK = 38;
+const TRACK = 49;
 const span = (from: number, to: number) => [from / TRACK, to / TRACK] as const;
 const screens = (n: number) => n / TRACK;
 
@@ -92,6 +93,15 @@ const PHASES = {
   tilt: span(31.5, 33.7), // --tilt: TENAX's evening sky, then down to the dunes
   tenaxWord: span(32.2, 32.9), // --tenax-word: TENAX in the sky; its orb lights
   sand: span(33.6, 37.9), // --sand: a slow push toward the big dune
+  khDim: span(37.85, 38.5), // --kh-dim: the desert goes dark
+  khRise: span(38.15, 38.85), // --kh-rise: the five orbs rise off their bar into an orbit
+  khOrbit: span(38.5, 40.4), // --kh-orbit: round and round, closing in, their trails becoming a ring
+  khCollapse: span(40.3, 40.85), // --kh-collapse: they fall into one another; a black hole forms
+  khDistort: span(40.7, 41.4), // --kh-distort: it bends the desert round it
+  khReveal: span(41.25, 42), // --kh-reveal: it opens as a keyhole, the ocean's light breaking through
+  keyhole: span(41.8, 43.45), // you fly at it
+  flash: span(43.15, 43.8), // --flash: through it, in a flash of the light beyond
+  pullBack: span(43.5, 44.45), // --pullback: the camera pulls back; the ocean is a photograph on the page
 };
 
 /*
@@ -126,6 +136,18 @@ const TENAX_BEATS = {
   people: span(36.35, 37.2),
   onward: span(37.15, 37.95),
 };
+
+/*
+ * What The South Project is (About.tsx), chapter by chapter, one for each
+ * landscape. The first is up through the keyhole; the last stays.
+ */
+const ABOUT_BEATS = [
+  span(44.0, 45.4),
+  span(45.2, 46.5),
+  span(46.3, 47.6),
+  span(47.4, 48.7),
+  span(48.5, 50),
+];
 
 /*
  * When each line of the story is up, fades included. They don't overlap, as
@@ -385,6 +407,28 @@ export default function Dive({ children }: { children: ReactNode }) {
       set("--tilt", easeInOut(range(p, PHASES.tilt)));
       set("--tenax-word", easeInOut(range(p, PHASES.tenaxWord)));
       set("--sand", easeInOut(range(p, PHASES.sand)));
+      // Out of Pentara: the desert goes dark, the orbs rise and orbit, fall
+      // into one another as a black hole, which opens as a keyhole onto what
+      // The South Project is (About.tsx). The portal (Keyhole.tsx) draws it
+      // all, from these.
+      const dim = range(p, PHASES.khDim);
+      set("--kh-dim", dim);
+      set("--kh-rise", range(p, PHASES.khRise));
+      set("--kh-orbit", range(p, PHASES.khOrbit));
+      set("--kh-collapse", range(p, PHASES.khCollapse));
+      set("--kh-distort", range(p, PHASES.khDistort));
+      set("--kh-reveal", range(p, PHASES.khReveal));
+      const open = range(p, PHASES.keyhole);
+      set("--kh-open", open);
+      set("--keyhole", easeInOut(open));
+      st.classList.toggle("is-void", dim > 0);
+      st.classList.toggle("is-keyhole", open > 0);
+      st.classList.toggle("is-about", open >= 1);
+      set("--flash", Math.sin(Math.PI * range(p, PHASES.flash)));
+      const pullBack = easeInOut(range(p, PHASES.pullBack));
+      set("--pullback", pullBack);
+      document.documentElement.classList.toggle("is-light", pullBack > 0.5);
+      ABOUT_BEATS.forEach((when, i) => set(`--about-${i}`, beat(p, when)));
       st.classList.toggle("is-cultura", p > PHASES.wingPass[0]);
       st.classList.toggle("is-in-cultura", cultura);
       set("--track", p);
@@ -454,6 +498,35 @@ export default function Dive({ children }: { children: ReactNode }) {
       window.removeEventListener("load", start);
     };
   }, []);
+
+  // Where the page's photograph sits (About.tsx), measured by layout (not
+  // its transforms), for the ocean to settle into it after the keyhole.
+  useEffect(() => {
+    const st = stage.current;
+    if (!st || !tenaxOn) return;
+    const measure = () => {
+      const frame = st.querySelector<HTMLElement>(".about-frame");
+      const page = frame?.offsetParent as HTMLElement | null;
+      if (!frame || !page) return;
+      const t = frame.offsetTop;
+      const l = frame.offsetLeft;
+      const r = page.clientWidth - l - frame.offsetWidth;
+      const b = page.clientHeight - t - frame.offsetHeight;
+      st.style.setProperty("--frame-t", `${t}px`);
+      st.style.setProperty("--frame-l", `${l}px`);
+      st.style.setProperty("--frame-r", `${r}px`);
+      st.style.setProperty("--frame-b", `${b}px`);
+      st.style.setProperty("--frame-cx", `${l + frame.offsetWidth / 2 - page.clientWidth / 2}px`);
+      st.style.setProperty("--frame-cy", `${t + frame.offsetHeight / 2 - page.clientHeight / 2}px`);
+      st.style.setProperty("--frame-radius", getComputedStyle(frame).borderTopLeftRadius);
+    };
+    const id = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, [tenaxOn]);
 
   // Each scene's photographs are decoded as soon as it mounts, a screen or
   // more before it shows, one at a time when the browser is idle. Otherwise
@@ -576,6 +649,8 @@ export default function Dive({ children }: { children: ReactNode }) {
           {culturaOn && <Cultura plane={plane} />}
           {tenaxOn && <Tenax />}
           {tenaxOn && <Dust className="descent-dust" view={dust} />}
+          {/* Out of Pentara, through a keyhole, into the real world. */}
+          {tenaxOn && <Keyhole />}
 
           {/* The five expressions: those met so far shine, the rest wait,
               faded, until you reach them. */}
@@ -586,6 +661,7 @@ export default function Dive({ children }: { children: ReactNode }) {
                   key={x.name}
                   className={`collect-slot${i < UNLOCKED ? " is-unlocked" : ""}${x.name === "SILVA" ? " is-silva" : ""}${x.name === "CULTURA" ? " is-cultura" : ""}${x.name === "TENAX" ? " is-tenax" : ""}`}
                   title={x.name}
+                  style={{ "--i": i } as CSSProperties}
                 >
                   {(skyOn || cloudOn || mountainOn) && (
                     <FluidOrb

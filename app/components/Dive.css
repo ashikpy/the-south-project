@@ -12,7 +12,7 @@
 
 .dive {
   position: relative;
-  height: 3900svh; /* 1 screen pinned + 38 screens of scroll (TRACK in Dive.tsx) */
+  height: 5000svh; /* 1 screen pinned + 49 screens of scroll (TRACK in Dive.tsx) */
   background: #000;
 }
 
@@ -653,4 +653,17 @@
   .descent-space {
     opacity: 1;
   }
+}
+
+/* ---------- Out of Pentara: the keyhole ---------- */
+
+/* The orbs leave their bar: the portal (Keyhole.tsx) draws them from here. */
+.collect {
+  opacity: calc(var(--origo, 0) * (1 - min(1, var(--kh-rise, 0) * 8)));
+}
+
+/* Once it is open, what lies behind it needs no drawing. */
+.dive-stage.is-about .tenax,
+.dive-stage.is-about .descent-dust {
+  display: none;
 }

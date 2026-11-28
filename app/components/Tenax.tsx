@@ -166,7 +166,7 @@ function Spindrift() {
     let drawn = true;
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
-      if (!stage?.classList.contains("is-tenax") || document.hidden) {
+      if (!stage?.classList.contains("is-tenax") || stage.classList.contains("is-portal") || document.hidden) {
         if (drawn) gl.clear(gl.COLOR_BUFFER_BIT);
         drawn = false;
         return;

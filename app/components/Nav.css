@@ -255,3 +255,44 @@
     animation: none;
   }
 }
+
+/* ---------- On the cream page (About), once the keyhole has opened ---------- */
+
+/* The logo stays light where it sits over the photograph; on phones the
+   photograph is lower, and it sits on the paper. */
+@media (max-aspect-ratio: 4/5) {
+  :root.is-light .nav-logo img {
+    filter: invert(1) brightness(0.1);
+  }
+}
+
+:root.is-light .nav-group {
+  background: rgb(20 18 16 / 0.86);
+}
+
+:root.is-light .nav-text {
+  color: #141210;
+}
+
+:root.is-light .nav-cta {
+  background: #141210;
+  color: #f4efe4;
+}
+
+:root.is-light .nav-cta:hover {
+  background: #a65f45;
+}
+
+:root.is-light .nav-cta-chip {
+  background: #f4efe4;
+  color: #141210;
+}
+
+.nav-logo img,
+.nav-group,
+.nav-text,
+.nav-cta,
+.nav-cta-chip {
+  transition-property: filter, background-color, color, transform, opacity;
+  transition-duration: 0.4s;
+}
